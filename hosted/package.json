@@ -1,0 +1,8 @@
+{
+  "name": "altkey-hosted",
+  "private": true,
+  "workspaces": [
+    "workers",
+    "dashboard"
+  ]
+}

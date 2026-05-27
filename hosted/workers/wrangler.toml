@@ -1,0 +1,27 @@
+name = "altkey"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Run `wrangler d1 create altkey` and paste the database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "altkey"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+migrations_dir = "migrations"
+
+[vars]
+# Non-secret config. Secrets go via `wrangler secret put`.
+DASHBOARD_ORIGIN = "https://altkey.app"
+CANARY_PUBLIC_KEY = ""
+
+# Required secrets (set with `wrangler secret put <NAME>`):
+#   CF_SECRET                 32-byte hex used as HKDF salt for K_worker derivation
+#   POLAR_API_KEY             Polar.sh API key for checkout creation
+#   POLAR_WEBHOOK_SECRET      shared HMAC secret with Polar
+#   NOWPAYMENTS_API_KEY       NOWPayments API key
+#   NOWPAYMENTS_IPN_SECRET    shared HMAC secret with NOWPayments
+#   CANARY_PRIVATE_KEY        ed25519 priv key (hex) for warrant canary signing
+
+[observability]
+enabled = true
