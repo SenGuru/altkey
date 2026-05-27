@@ -7,20 +7,20 @@ from . import store
 
 _LOGIN_URLS = {
     "claude": "https://claude.ai/login",
-    "chatgpt": "https://chat.openai.com/",
-    "gemini": "https://gemini.google.com/",
+    "chatgpt": "https://chatgpt.com/",
+    "gemini": "https://gemini.google.com/app",
 }
 
 _DONE_URL_HINTS = {
     "claude": ("claude.ai/chat", "claude.ai/new", "claude.ai/projects", "claude.ai/recents"),
-    "chatgpt": ("chat.openai.com/c", "chat.openai.com/?", "chatgpt.com/c", "chatgpt.com/?"),
+    "chatgpt": ("chatgpt.com/c", "chatgpt.com/?", "chatgpt.com/g"),
     "gemini": ("gemini.google.com/app",),
 }
 
 _COOKIE_KEYS = {
     "claude": ("sessionKey",),
     "chatgpt": ("__Secure-next-auth.session-token",),
-    "gemini": ("__Secure-1PSID", "__Secure-1PSIDTS", "__Secure-1PSIDCC"),
+    "gemini": ("__Secure-1PSID", "__Secure-1PSIDTS"),
 }
 
 
