@@ -1,0 +1,19 @@
+[project]
+name = "altkey"
+version = "0.1.0"
+description = "Local proxy that turns AI subscriptions into OpenAI-compatible API keys"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "playwright>=1.48",
+    "cryptography>=43",
+    "keyring>=25",
+    "pydantic>=2.9",
+    "python-multipart>=0.0.12",
+    "jinja2>=3.1",
+]
+
+[tool.uv]
+package = false

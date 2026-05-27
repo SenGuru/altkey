@@ -1,0 +1,104 @@
+import json
+import os
+import secrets
+import sqlite3
+import time
+from pathlib import Path
+
+import keyring
+from cryptography.fernet import Fernet
+
+DATA_DIR = Path(os.environ.get("ALTKEY_HOME", Path.home() / ".altkey"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "store.db"
+
+_SERVICE = "altkey"
+_KEYRING_USER = "fernet_master"
+
+
+def _fernet() -> Fernet:
+    key = keyring.get_password(_SERVICE, _KEYRING_USER)
+    if not key:
+        key = Fernet.generate_key().decode()
+        keyring.set_password(_SERVICE, _KEYRING_USER, key)
+    return Fernet(key.encode())
+
+
+def _conn() -> sqlite3.Connection:
+    c = sqlite3.connect(DB_PATH)
+    c.execute("PRAGMA journal_mode=WAL")
+    return c
+
+
+def init() -> None:
+    with _conn() as c:
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                provider TEXT PRIMARY KEY,
+                ciphertext BLOB NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                key TEXT PRIMARY KEY,
+                label TEXT,
+                created_at INTEGER NOT NULL
+            )
+        """)
+
+
+def save_session(provider: str, data: dict) -> None:
+    blob = _fernet().encrypt(json.dumps(data).encode())
+    with _conn() as c:
+        c.execute(
+            "INSERT OR REPLACE INTO sessions (provider, ciphertext, updated_at) VALUES (?, ?, ?)",
+            (provider, blob, int(time.time())),
+        )
+
+
+def load_session(provider: str) -> dict | None:
+    with _conn() as c:
+        row = c.execute(
+            "SELECT ciphertext FROM sessions WHERE provider = ?", (provider,)
+        ).fetchone()
+    if not row:
+        return None
+    return json.loads(_fernet().decrypt(row[0]).decode())
+
+
+def list_sessions() -> list[dict]:
+    with _conn() as c:
+        rows = c.execute("SELECT provider, updated_at FROM sessions").fetchall()
+    return [{"provider": p, "updated_at": u} for p, u in rows]
+
+
+def delete_session(provider: str) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE provider = ?", (provider,))
+
+
+def mint_key(label: str = "") -> str:
+    key = "sk-alt-" + secrets.token_urlsafe(32)
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO api_keys (key, label, created_at) VALUES (?, ?, ?)",
+            (key, label, int(time.time())),
+        )
+    return key
+
+
+def key_exists(key: str) -> bool:
+    with _conn() as c:
+        return c.execute("SELECT 1 FROM api_keys WHERE key = ?", (key,)).fetchone() is not None
+
+
+def list_keys() -> list[dict]:
+    with _conn() as c:
+        rows = c.execute("SELECT key, label, created_at FROM api_keys ORDER BY created_at DESC").fetchall()
+    return [{"key": k, "label": l, "created_at": t} for k, l, t in rows]
+
+
+def revoke_key(key: str) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM api_keys WHERE key = ?", (key,))
