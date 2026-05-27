@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>altkey</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="wrap">
+  <h1>altkey</h1>
+  <div id="screen-onboard" hidden>
+    <p class="sub">Create your encrypted vault. Your passphrase never leaves this device.</p>
+    <input id="onboard-pass" type="password" placeholder="Choose a passphrase (12+ chars)" autocomplete="new-password" />
+    <input id="onboard-pass2" type="password" placeholder="Confirm" autocomplete="new-password" />
+    <button id="onboard-go">Create vault</button>
+    <div id="onboard-err" class="err"></div>
+  </div>
+  <div id="screen-recovery" hidden>
+    <p class="sub">Write this down. You'll need it if you forget your passphrase. We can't recover it for you.</p>
+    <div id="recovery-code" class="recovery"></div>
+    <button id="recovery-done">I saved it</button>
+  </div>
+  <div id="screen-lock" hidden>
+    <p class="sub">Vault is locked.</p>
+    <input id="lock-pass" type="password" placeholder="Passphrase" autocomplete="current-password" />
+    <button id="lock-unlock">Unlock</button>
+    <div id="lock-err" class="err"></div>
+  </div>
+  <div id="screen-main" hidden>
+    <div id="status"></div>
+    <p class="sub small">Cookies sync automatically when you use Claude/ChatGPT/Gemini in your browser.</p>
+    <button id="open-dashboard" class="link">Open dashboard ↗</button>
+    <button id="lock-now" class="link">Lock</button>
+  </div>
+</div>
+<script type="module" src="popup.js"></script>
+</body>
+</html>

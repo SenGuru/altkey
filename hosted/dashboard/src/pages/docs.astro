@@ -1,0 +1,102 @@
+---
+import "../styles/global.css";
+---
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>altkey — docs</title>
+</head>
+<body>
+<div class="container">
+<div class="nav">
+  <span class="brand">altkey</span>
+  <a href="/app">dashboard</a>
+  <a href="/canary.txt">canary</a>
+  <a href="/" style="margin-left:auto;">home</a>
+</div>
+
+<h1>Docs</h1>
+
+<h2 id="quickstart">Quickstart</h2>
+<div class="card">
+  <p><strong>1.</strong> Install the extension (<a href="#extension">Chrome Web Store / Firefox AMO links</a>) and create a passphrase.</p>
+  <p><strong>2.</strong> Log into <a href="https://claude.ai" target="_blank">claude.ai</a> / <a href="https://chatgpt.com" target="_blank">chatgpt.com</a> / <a href="https://gemini.google.com" target="_blank">gemini.google.com</a> in normal browser tabs. The extension auto-syncs.</p>
+  <p><strong>3.</strong> Go to <a href="/app">/app</a>, mint a key.</p>
+  <p><strong>4.</strong> Drop the key into your tool with base URL <code>https://api.altkey.app/v1</code>.</p>
+</div>
+
+<h2>Model name routing</h2>
+<table>
+<thead><tr><th>Prefix</th><th>Routes to</th><th>Examples</th></tr></thead>
+<tbody>
+<tr><td><code>claude-*</code></td><td>Claude</td><td><code>claude-sonnet-4-5</code>, <code>claude-opus-4-5</code></td></tr>
+<tr><td><code>gpt-*</code>, <code>o1</code>, <code>o3</code>, <code>o4-*</code>, <code>chatgpt-*</code></td><td>ChatGPT</td><td><code>gpt-4o</code>, <code>o3</code>, <code>chatgpt-4o-latest</code></td></tr>
+<tr><td><code>gemini-*</code></td><td>Gemini</td><td><code>gemini-2.5-pro</code>, <code>gemini-2.5-flash</code></td></tr>
+</tbody>
+</table>
+
+<h2>Endpoints</h2>
+<table>
+<thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td><code>/v1/models</code></td><td>Bearer</td><td>OpenAI-shape model list</td></tr>
+<tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>Bearer</td><td>Streaming + non-streaming</td></tr>
+<tr><td>GET</td><td><code>/canary.txt</code></td><td>none</td><td>Warrant canary</td></tr>
+</tbody>
+</table>
+
+<h2>Integration recipes</h2>
+
+<h3>Cursor</h3>
+<pre><code>Settings → Models → Add custom model
+Base URL: https://api.altkey.app/v1
+Model name: claude-sonnet-4-5
+API key: sk-alt-...</code></pre>
+
+<h3>OpenAI Python SDK</h3>
+<pre><code>from openai import OpenAI
+client = OpenAI(base_url="https://api.altkey.app/v1", api_key="sk-alt-...")
+r = client.chat.completions.create(model="claude-sonnet-4-5", messages=[{"role":"user","content":"hi"}])
+print(r.choices[0].message.content)</code></pre>
+
+<h3>curl</h3>
+<pre><code>curl https://api.altkey.app/v1/chat/completions \
+  -H "Authorization: Bearer sk-alt-..." \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gemini-2.5-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'</code></pre>
+
+<h2 id="risk">The risk picture</h2>
+<div class="card">
+<p>This service operates against the ToS of Claude, ChatGPT, and Gemini. Specifically:</p>
+<ul>
+  <li>Anthropic <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank">prohibits</a> reverse-engineering and unauthorized programmatic access. In January 2026 they enforced against OpenClaw, OpenCode, Roo Code, and Goose.</li>
+  <li>OpenAI prohibits automation/scripts against ChatGPT Plus. Detection patterns: account suspension is the typical outcome.</li>
+  <li>Google prohibits automated access to Gemini Advanced.</li>
+</ul>
+<p>What we do to minimize your risk:</p>
+<ul>
+  <li>Forward your captured User-Agent + Accept-Language to keep the request fingerprint consistent with your normal browser.</li>
+  <li>Limit concurrent in-flight requests per session.</li>
+  <li>Route through Cloudflare edge PoPs near your likely region (based on captured timezone).</li>
+  <li>Soft-cap at 1000 requests/day per provider so a runaway script doesn't trigger a hard suspension.</li>
+</ul>
+<p>What we cannot prevent:</p>
+<ul>
+  <li>A provider noticing the same session token used from a residential IP + Cloudflare IP within the same minute.</li>
+  <li>A provider deciding to deploy a heuristic that targets this category and silently suspending all detected accounts.</li>
+  <li>A provider legal team sending us a cease-and-desist that forces a shutdown.</li>
+</ul>
+<p>If we get a cease-and-desist or a subpoena, we will shut down within 24 hours and publish the reason. The OSS self-host build (<a href="https://github.com/SenGuru/altkey">github.com/SenGuru/altkey</a>) keeps working forever — point it at <code>http://127.0.0.1:8787</code> instead of <code>https://api.altkey.app</code>.</p>
+</div>
+
+<h2 id="extension">Extension downloads</h2>
+<div class="card">
+<p>Chrome Web Store: <em>(pending review)</em></p>
+<p>Firefox AMO: <em>(pending review)</em></p>
+<p>Sideload from GitHub: <a href="https://github.com/SenGuru/altkey/releases">latest release</a></p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+---
+import "../styles/global.css";
+---
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>altkey — billing</title>
+</head>
+<body>
+<div class="container">
+<div class="nav">
+  <span class="brand">altkey</span>
+  <a href="/app">dashboard</a>
+  <a href="/docs">docs</a>
+  <a href="/" style="margin-left:auto;">home</a>
+</div>
+
+<h1>Upgrade to Pro</h1>
+<p class="sub">$5/month. Unlimited messages. Cancel anytime.</p>
+
+<div class="card">
+  <h3 style="margin-top:0;">Pay by card (Polar)</h3>
+  <p>Polar handles the card payment and your subscription. We never see your card details.</p>
+  <button id="polar-btn" class="cta" style="border:0;cursor:pointer;">Continue to Polar →</button>
+  <div class="err" id="polar-err"></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Pay with crypto (NOWPayments)</h3>
+  <p>BTC, ETH, USDC, USDT, and ~70 others. Fully pseudonymous.</p>
+  <button id="crypto-btn" class="cta" style="border:0;cursor:pointer;">Continue to NOWPayments →</button>
+  <div class="err" id="crypto-err"></div>
+</div>
+
+<p class="sub" style="margin-top:24px;font-size:13px;">
+  Subscriptions auto-renew until canceled. Refunds are pro-rated if we shut down or your provider account is permanently banned within 30 days of payment. Email refund requests are not supported — open a Discord thread.
+</p>
+
+<script type="module">
+const API_BASE = (window.PUBLIC_API_BASE || "https://api.altkey.app");
+const $ = (s) => document.querySelector(s);
+
+$("#polar-btn").addEventListener("click", async () => {
+  $("#polar-err").textContent = "";
+  try {
+    const r = await fetch(`${API_BASE}/api/billing/checkout?processor=polar`, { credentials: "include" });
+    if (!r.ok) throw new Error(await r.text());
+    const { url } = await r.json();
+    location.href = url;
+  } catch (e) {
+    $("#polar-err").textContent = e.message;
+  }
+});
+
+$("#crypto-btn").addEventListener("click", async () => {
+  $("#crypto-err").textContent = "";
+  try {
+    const r = await fetch(`${API_BASE}/api/billing/checkout?processor=nowpayments`, { credentials: "include" });
+    if (!r.ok) throw new Error(await r.text());
+    const { url } = await r.json();
+    location.href = url;
+  } catch (e) {
+    $("#crypto-err").textContent = e.message;
+  }
+});
+</script>
+</div>
+</body>
+</html>

@@ -1,0 +1,150 @@
+---
+import "../styles/global.css";
+---
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>altkey dashboard</title>
+</head>
+<body>
+<div class="container">
+<div class="nav">
+  <span class="brand">altkey</span>
+  <a href="/docs">docs</a>
+  <a href="/canary.txt">canary</a>
+  <a href="/" style="margin-left:auto;">home</a>
+</div>
+
+<div id="screen-unlock">
+  <h1>Unlock your vault</h1>
+  <p class="sub">Enter the passphrase you set in the extension.</p>
+  <div class="card">
+    <div class="row" style="gap:8px;">
+      <input id="userid" placeholder="user_id (26-char ULID)" />
+    </div>
+    <div class="row" style="gap:8px; margin-top:10px;">
+      <input id="pass" type="password" placeholder="passphrase" autocomplete="current-password" />
+      <button id="unlock-btn" style="width:auto;">Unlock</button>
+    </div>
+    <div class="err" id="unlock-err"></div>
+    <p class="sub" style="margin-top:14px;font-size:13px;">
+      Don't have an account? Install the <a href="https://chrome.google.com/webstore" target="_blank">altkey browser extension</a> and create one. Your <code>user_id</code> is displayed there.
+    </p>
+  </div>
+</div>
+
+<div id="screen-main" hidden>
+  <h1>Dashboard</h1>
+  <div class="card">
+    <h3 style="margin-top:0;">Account</h3>
+    <div class="sub" id="account-meta"></div>
+    <div style="margin-top:12px;">
+      <a class="cta" id="upgrade-btn" href="/billing">Upgrade to Pro</a>
+      <button class="ghost" id="logout-btn">Log out</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Provider sessions</h3>
+    <div id="sessions"></div>
+    <p class="sub" style="margin-top:12px;font-size:13px;">Cookies refresh automatically while you use Claude/ChatGPT/Gemini in your browser. If a dot is amber, open the corresponding site and log in briefly.</p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:12px;">
+      <h3 style="margin:0;">API keys</h3>
+      <div style="display:flex;gap:8px;">
+        <input id="key-label" placeholder="label (optional)" style="width:auto;" />
+        <button id="mint-btn">Mint key</button>
+      </div>
+    </div>
+    <div id="keys"></div>
+    <p class="sub" style="margin-top:12px;font-size:13px;">Endpoint: <code>https://api.altkey.app/v1</code></p>
+  </div>
+</div>
+
+<script type="module">
+import { unlock, accountStatus, listKeys, mintKey, revokeKey, logout } from "/src/lib/api.ts";
+import { sha256, b64ToBytes, bytesToB64, deriveKUserViaWasm } from "/src/lib/crypto.ts";
+
+const $ = (s) => document.querySelector(s);
+
+async function showMain() {
+  document.getElementById("screen-unlock").hidden = true;
+  document.getElementById("screen-main").hidden = false;
+  const status = await accountStatus();
+  $("#account-meta").textContent = `${status.user_id} — plan: ${status.plan}`;
+  $("#sessions").innerHTML = ["claude", "chatgpt", "gemini"].map((p) => {
+    const row = status.sessions.find((s) => s.provider === p);
+    const cls = !row ? "off" : row.stale ? "stale" : "on";
+    const label = !row ? "not connected" : row.stale ? "stale — re-login" : "synced";
+    const when = row ? new Date(row.updated_at * 1000).toLocaleString() : "—";
+    const name = { claude: "Claude", chatgpt: "ChatGPT", gemini: "Gemini" }[p];
+    return `<div class="row"><span><span class="dot ${cls}"></span>${name}</span><span class="sub">${label} · ${when}</span></div>`;
+  }).join("");
+
+  const keys = await listKeys();
+  if (!keys.keys.length) {
+    $("#keys").innerHTML = `<div class="sub">No keys yet. Mint one above.</div>`;
+  } else {
+    $("#keys").innerHTML = keys.keys.map((k) => `
+      <div class="row">
+        <span><code>${k.key_prefix}</code> <span class="sub">${k.label ?? ""}</span></span>
+        <button class="ghost" data-revoke="${k.key_prefix}">Revoke</button>
+      </div>
+    `).join("");
+  }
+}
+
+$("#unlock-btn").addEventListener("click", async () => {
+  $("#unlock-err").textContent = "";
+  const userId = $("#userid").value.trim().toUpperCase();
+  const pass = $("#pass").value;
+  if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(userId)) {
+    $("#unlock-err").textContent = "user_id must be a 26-character ULID";
+    return;
+  }
+  try {
+    // Fetch salt from extension via runtime messaging or expect user
+    // to paste a recovery payload. For v1 we accept that the dashboard
+    // unlock needs the extension installed and the user has copied their
+    // salt via an export action. Placeholder: prompt for salt.
+    const salt_b64 = prompt("Paste your salt (from extension → Settings → Export salt). This stays local.");
+    if (!salt_b64) return;
+    const k = await deriveKUserViaWasm(pass, b64ToBytes(salt_b64));
+    const verifier = await sha256(k);
+    await unlock(userId, bytesToB64(verifier));
+    await showMain();
+  } catch (e) {
+    $("#unlock-err").textContent = e.message;
+  }
+});
+
+document.body.addEventListener("click", async (e) => {
+  const t = e.target;
+  if (t.id === "mint-btn") {
+    const r = await mintKey($("#key-label").value);
+    alert("Your new key (copy now — won't be shown again):\n\n" + r.key);
+    $("#key-label").value = "";
+    await showMain();
+  } else if (t.dataset?.revoke) {
+    if (confirm("Revoke this key?")) {
+      await revokeKey(t.dataset.revoke);
+      await showMain();
+    }
+  } else if (t.id === "logout-btn") {
+    await logout();
+    location.reload();
+  }
+});
+
+// If already unlocked (session cookie set), skip to main.
+fetch("/api/account/status", { credentials: "include" }).then((r) => {
+  if (r.ok) showMain();
+});
+</script>
+
+</div>
+</body>
+</html>

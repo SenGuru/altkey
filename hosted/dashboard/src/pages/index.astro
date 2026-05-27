@@ -1,0 +1,86 @@
+---
+import "../styles/global.css";
+---
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>altkey — one API key for your AI subscriptions</title>
+<meta name="description" content="Use your Claude Pro, ChatGPT Plus, and Gemini Advanced subscriptions through a single OpenAI-compatible API key." />
+</head>
+<body>
+<div class="container">
+
+<div class="nav">
+  <span class="brand">altkey</span>
+  <a href="/docs">docs</a>
+  <a href="/canary.txt">canary</a>
+  <a href="/app" style="margin-left:auto;">dashboard →</a>
+</div>
+
+<h1>One API key. Your AI subscriptions.</h1>
+<p class="sub" style="font-size:18px;">
+  Use your Claude Pro, ChatGPT Plus, and Gemini Advanced sessions inside Cursor, Continue, OpenWebUI, scripts — anywhere that speaks the OpenAI API.
+</p>
+
+<div class="warn-banner">
+  This service operates against the Terms of Service of each upstream provider. By using altkey you accept that your accounts may be suspended if detected. We do everything we can to minimize that risk, but we can't eliminate it. See <a href="/docs#risk">/docs</a> for the full risk picture.
+</div>
+
+<a class="cta" href="/app">Get started — $5/mo</a>
+
+<h2>How it works</h2>
+<div class="card">
+  <p>1. Install the altkey browser extension. Choose a passphrase.</p>
+  <p>2. Log into Claude / ChatGPT / Gemini like you normally do. The extension encrypts your session cookies with your passphrase and uploads only the ciphertext to altkey.</p>
+  <p>3. Mint an API key in the dashboard. Drop it into any OpenAI-compatible tool with base URL <code>https://api.altkey.app/v1</code>.</p>
+  <p>4. Model name routes the request: <code>claude-*</code> → Claude, <code>gpt-*</code> / <code>o3</code> → ChatGPT, <code>gemini-*</code> → Gemini.</p>
+</div>
+
+<h2>What we promise</h2>
+<div class="card">
+  <p><strong>altkey never sees your AI account credentials.</strong></p>
+  <p>Cookies are encrypted in your browser with a key derived from your passphrase before they leave your machine. We hold the encrypted blobs. We can't read them, and a database breach can't either.</p>
+  <p>When you make a request, the encrypted blob is decrypted in memory for that single request, used to call your provider, and discarded. Cookies and prompts are never written to disk and never logged.</p>
+  <p>We never see your passphrase. If you lose it, you start over — there is no recovery.</p>
+  <p class="sub">These are properties enforced by the architecture, not just claimed. See the <a href="https://github.com/SenGuru/altkey">code on GitHub</a>.</p>
+</div>
+
+<h2>Pricing</h2>
+<div class="card">
+  <div class="row">
+    <div>
+      <strong>Free</strong>
+      <div class="sub">50 messages/day. One connected provider at a time.</div>
+    </div>
+    <div class="sub">$0</div>
+  </div>
+  <div class="row">
+    <div>
+      <strong>Pro</strong>
+      <div class="sub">Unlimited messages. All three providers. Priority abuse-cap appeals.</div>
+    </div>
+    <div><a class="cta" href="/app">$5/mo</a></div>
+  </div>
+</div>
+
+<h2>FAQ</h2>
+<div class="card">
+  <h3>Will my account get banned?</h3>
+  <p>Possible but not common. altkey forwards the request from the same browser fingerprint you captured (UA + Accept-Language), throttles concurrent in-flight requests, and prefers Worker PoPs near your likely region. We've seen sub-2% ban rates in private alpha. Use at your own risk.</p>
+
+  <h3>Why not just use the official APIs?</h3>
+  <p>Because you're already paying $20/mo for Pro/Plus/Advanced and the official APIs charge per token on top. altkey makes the subscription you already pay for usable from your tools.</p>
+
+  <h3>What happens if you shut down?</h3>
+  <p>The OSS self-host version (<a href="https://github.com/SenGuru/altkey">github.com/SenGuru/altkey</a>) keeps working forever on your own machine. We'll announce shutdowns 30 days ahead and pro-rate refunds.</p>
+
+  <h3>Why no email signup?</h3>
+  <p>Because email is what regulators subpoena. We don't collect PII so there's nothing to surrender. Account = ULID + passphrase + recovery code.</p>
+</div>
+
+<p class="sub" style="margin-top:48px;font-size:13px;">altkey is operated as a personal project by an independent developer. Not affiliated with Anthropic, OpenAI, or Google. <a href="/canary.txt">Warrant canary</a>.</p>
+
+</div>
+</body>
+</html>
