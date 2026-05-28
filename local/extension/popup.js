@@ -1,22 +1,25 @@
 const DEFAULT_SERVER = "http://127.0.0.1:8787";
 
+// `requiredPrefixes`: a provider counts as "logged in" if at least one cookie
+// NAME starts with one of these. Prefix-matching handles chunked cookies like
+// ChatGPT's `__Secure-next-auth.session-token.0`.
 const PROVIDERS = {
   claude: {
     name: "Claude",
-    cookieDomain: "claude.ai",
-    required: ["sessionKey"],
+    cookieDomains: ["claude.ai"],
+    requiredPrefixes: ["sessionKey"],
     loginUrl: "https://claude.ai/login",
   },
   chatgpt: {
     name: "ChatGPT",
-    cookieDomain: "chatgpt.com",
-    required: ["__Secure-next-auth.session-token"],
+    cookieDomains: ["chatgpt.com", "openai.com"],
+    requiredPrefixes: ["__Secure-next-auth.session-token"],
     loginUrl: "https://chatgpt.com/",
   },
   gemini: {
     name: "Gemini",
-    cookieDomain: "google.com",
-    required: ["__Secure-1PSID"],
+    cookieDomains: ["google.com"],
+    requiredPrefixes: ["__Secure-1PSID"],
     loginUrl: "https://gemini.google.com/app",
   },
 };
@@ -66,25 +69,31 @@ async function render() {
 }
 
 async function readCookies(cfg) {
-  const cookies = await chrome.cookies.getAll({ domain: cfg.cookieDomain });
-  return cookies.map((c) => ({
-    name: c.name,
-    value: c.value,
-    domain: c.domain,
-    path: c.path,
-    secure: c.secure,
-  }));
+  const seen = new Set();
+  const out = [];
+  for (const dom of cfg.cookieDomains) {
+    const cookies = await chrome.cookies.getAll({ domain: dom });
+    for (const c of cookies) {
+      const k = `${c.name}@${c.domain}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({ name: c.name, value: c.value, domain: c.domain, path: c.path, secure: c.secure });
+    }
+  }
+  return out;
+}
+
+function isLoggedIn(cfg, cookies) {
+  return cookies.some((c) => cfg.requiredPrefixes.some((p) => c.name.startsWith(p)));
 }
 
 async function connect(id) {
   const cfg = PROVIDERS[id];
   const server = await getServer();
   const cookies = await readCookies(cfg);
-  const have = new Set(cookies.map((c) => c.name));
-  const missing = cfg.required.filter((r) => !have.has(r));
 
-  if (missing.length) {
-    // Not logged in — open the login page and tell the user to come back.
+  if (!isLoggedIn(cfg, cookies)) {
+    // Not logged in (no session cookie found) — open login, tell user to retry.
     await chrome.tabs.create({ url: cfg.loginUrl });
     toast(`Log into ${cfg.name} in the tab that opened, then click Connect again.`, "err");
     return;

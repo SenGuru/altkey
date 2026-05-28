@@ -176,8 +176,11 @@ async def admin_capture(body: CaptureReq):
     browser's chrome.cookies API after an explicit user 'Connect' click."""
     if body.provider not in _IMPORT_DOMAIN:
         return JSONResponse({"ok": False, "error": f"unknown provider: {body.provider}"}, status_code=400)
-    have = {c.name for c in body.cookies}
-    missing = [c for c in _IMPORT_REQUIRED[body.provider] if c not in have]
+    names = [c.name for c in body.cookies]
+    missing = [
+        p for p in _IMPORT_REQUIRED[body.provider]
+        if not any(n.startswith(p) for n in names)
+    ]
     if missing:
         return JSONResponse(
             {"ok": False, "error": f"not logged in — missing: {', '.join(missing)}"},
@@ -205,8 +208,11 @@ async def admin_import(body: ImportReq):
     if not pairs:
         return JSONResponse({"ok": False, "error": "no cookies parsed — paste name=value pairs"}, status_code=400)
 
-    have = {name for name, _ in pairs}
-    missing = [c for c in _IMPORT_REQUIRED[body.provider] if c not in have]
+    names = [name for name, _ in pairs]
+    missing = [
+        c for c in _IMPORT_REQUIRED[body.provider]
+        if not any(n.startswith(c) for n in names)
+    ]
     if missing:
         return JSONResponse(
             {"ok": False, "error": f"missing required cookie(s): {', '.join(missing)}"},
