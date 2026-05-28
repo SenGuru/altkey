@@ -63,6 +63,34 @@ def init() -> None:
                 created_at INTEGER NOT NULL
             )
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS detected_models (
+                provider TEXT PRIMARY KEY,
+                models TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+        """)
+
+
+def save_detected_models(provider: str, models: list[str]) -> None:
+    with _conn() as c:
+        c.execute(
+            "INSERT OR REPLACE INTO detected_models (provider, models, updated_at) VALUES (?, ?, ?)",
+            (provider, json.dumps(models), int(time.time())),
+        )
+
+
+def load_detected_models(provider: str) -> dict | None:
+    try:
+        with _conn() as c:
+            row = c.execute(
+                "SELECT models, updated_at FROM detected_models WHERE provider = ?", (provider,)
+            ).fetchone()
+    except sqlite3.OperationalError:
+        return None  # table not created yet (init() not run)
+    if not row:
+        return None
+    return {"models": json.loads(row[0]), "updated_at": row[1]}
 
 
 def save_session(provider: str, data: dict) -> None:

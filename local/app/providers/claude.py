@@ -76,17 +76,86 @@ MODELS = [
 ]
 
 
+# Candidate ladders for auto-detection — probe newest-first per family.
+_DETECT_LADDER = {
+    "opus": [f"claude-opus-4-{n}" for n in range(12, 4, -1)],
+    "sonnet": [f"claude-sonnet-4-{n}" for n in range(12, 4, -1)],
+    "haiku": [f"claude-haiku-4-{n}" for n in range(12, 4, -1)],
+}
+
+
+def _family_latest(family: str) -> str:
+    """Newest detected model for a family, else the static default."""
+    cached = store.load_detected_models("claude")
+    if cached:
+        matches = [m for m in cached["models"] if family in m]
+        if matches:
+            return matches[0]  # detect() stores newest-first
+    return {"opus": _OPUS, "sonnet": _SONNET, "haiku": _HAIKU}[family]
+
+
 def _resolve_model(model: str) -> str:
+    m = (model or "").lower()
+    # Exact, currently-available model → honor as-is.
+    if model in _WEB_MODEL:
+        # but if it's a generic alias mapping, prefer the live-detected latest
+        pass
+    if "opus" in m:
+        if model in _WEB_MODEL and _WEB_MODEL[model] == model:
+            return model  # explicit exact version
+        return _family_latest("opus")
+    if "haiku" in m:
+        if model in _WEB_MODEL and _WEB_MODEL[model] == model:
+            return model
+        return _family_latest("haiku")
+    if "sonnet" in m:
+        if model in _WEB_MODEL and _WEB_MODEL[model] == model:
+            return model
+        return _family_latest("sonnet")
     if model in _WEB_MODEL:
         return _WEB_MODEL[model]
-    m = (model or "").lower()
-    if "opus" in m:
-        return _OPUS
-    if "haiku" in m:
-        return _HAIKU
-    if "sonnet" in m:
-        return _SONNET
-    return _SONNET
+    return _family_latest("sonnet")
+
+
+async def detect(session: dict) -> list[str]:
+    """Probe the account for the newest available model per family. Returns a
+    newest-first list (e.g. ['claude-opus-4-8','claude-sonnet-4-6','claude-haiku-4-5'])."""
+    cookies = _cookies(session)
+    found: list[str] = []
+    async with AsyncSession(impersonate=_IMPERSONATE, timeout=60) as s:
+        org = await _org_id(s, cookies)
+        for family, ladder in _DETECT_LADDER.items():
+            for candidate in ladder:
+                if await _model_ok(s, org, cookies, candidate):
+                    found.append(candidate)
+                    break  # newest in this family found
+    store.save_detected_models("claude", found)
+    return found
+
+
+async def _model_ok(s: AsyncSession, org: str, cookies: dict, model: str) -> bool:
+    conv = str(uuid.uuid4())
+    await s.post(f"{_BASE}/api/organizations/{org}/chat_conversations",
+                 headers=_headers(), cookies=cookies, json={"uuid": conv, "name": ""}, impersonate=_IMPERSONATE)
+    payload = {"prompt": "Human: hi\n\nAssistant:", "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
+               "timezone": "America/Los_Angeles", "attachments": [], "files": [], "sync_sources": [],
+               "rendering_mode": "messages", "model": model}
+    ok = False
+    try:
+        async with s.stream("POST", f"{_BASE}/api/organizations/{org}/chat_conversations/{conv}/completion",
+                            headers=_headers(), cookies=cookies, json=payload, impersonate=_IMPERSONATE) as resp:
+            ok = resp.status_code < 400
+            if not ok:
+                await resp.atext()
+    except Exception:
+        ok = False
+    finally:
+        try:
+            await s.request("DELETE", f"{_BASE}/api/organizations/{org}/chat_conversations/{conv}",
+                            headers=_headers(), cookies=cookies, impersonate=_IMPERSONATE)
+        except Exception:
+            pass
+    return ok
 
 
 class _ModelNotAvailable(Exception):

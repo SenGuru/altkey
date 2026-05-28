@@ -210,6 +210,7 @@ async def admin_capture(body: CaptureReq):
         for c in body.cookies
     ]
     store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
+    asyncio.create_task(providers.detect_one(body.provider))
     return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
 
 
@@ -238,11 +239,17 @@ async def admin_import(body: ImportReq):
         for name, value in pairs
     ]
     store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
+    asyncio.create_task(providers.detect_one(body.provider))
     return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
 
 
 class MintReq(BaseModel):
     label: str = ""
+
+
+@app.post("/admin/detect", dependencies=[Depends(_check_admin)])
+async def admin_detect():
+    return {"ok": True, "detected": await providers.detect_all()}
 
 
 @app.post("/admin/keys", dependencies=[Depends(_check_admin)])

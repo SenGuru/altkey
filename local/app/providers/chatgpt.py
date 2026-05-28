@@ -87,6 +87,18 @@ async def fetch_available_models(s: "AsyncSession", token: str, cookies: dict, d
     return [m.get("slug") for m in (data.get("models") or []) if isinstance(m, dict) and m.get("slug")]
 
 
+async def detect(session: dict) -> list[str]:
+    """Cache the account's real available model slugs (via /backend-api/models)."""
+    cookies = _cookies(session)
+    device = _device_id(session)
+    async with AsyncSession(impersonate=_IMPERSONATE, timeout=60) as s:
+        token = await _access_token(s, cookies)
+        slugs = await fetch_available_models(s, token, cookies, device)
+    if slugs:
+        store.save_detected_models("chatgpt", slugs)
+    return slugs
+
+
 def _cookies(session: dict) -> dict:
     out = {}
     for c in session.get("cookies", []):

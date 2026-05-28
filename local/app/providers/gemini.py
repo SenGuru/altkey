@@ -38,6 +38,13 @@ _MODEL_HEADER = {
 }
 
 
+async def detect(session: dict) -> list[str]:
+    """Gemini has no clean model-list endpoint; cache the static catalog so
+    /v1/models is consistent with the other providers."""
+    store.save_detected_models("gemini", MODELS)
+    return MODELS
+
+
 def _cookies(session: dict) -> dict:
     out = {}
     for c in session.get("cookies", []):
