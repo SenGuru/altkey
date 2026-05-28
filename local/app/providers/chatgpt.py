@@ -1,4 +1,8 @@
+import base64
+import hashlib
 import json
+import random
+import time
 import uuid
 from typing import AsyncIterator
 
@@ -83,6 +87,67 @@ def _device_id(session: dict) -> str:
     return str(uuid.uuid4())
 
 
+# --- ChatGPT sentinel proof-of-work -----------------------------------------
+# chatgpt.com requires a chat-requirements token plus a solved proof-of-work
+# on every conversation request, or it returns "Unusual activity detected".
+# Algorithm reverse-engineered from the web client.
+
+_POW_CORES = [8, 12, 16, 24]
+_POW_SCREENS = [3000, 4000, 6000]
+
+
+def _now_gmt() -> str:
+    return time.strftime("%a %b %d %Y %H:%M:%S GMT+0000 (Coordinated Universal Time)", time.gmtime())
+
+
+def _solve_pow(seed: str, difficulty: str, user_agent: str) -> str:
+    core = random.choice(_POW_CORES)
+    screen = random.choice(_POW_SCREENS)
+    now = _now_gmt()
+    config = [
+        core + screen,
+        now,
+        4294705152,
+        0,
+        user_agent,
+        "",
+        "",
+        "en-US",
+        "en-US,en",
+        0,
+        "location",
+        "scrollX",
+        "_reactListeningg",
+        now,
+        random.random(),
+    ]
+    diff_len = len(difficulty)
+    for i in range(300000):
+        config[3] = i
+        config[9] = round(1000 * (i / 300000))
+        b = base64.b64encode(json.dumps(config).encode()).decode()
+        h = hashlib.sha3_512((seed + b).encode()).hexdigest()
+        if h[:diff_len] <= difficulty:
+            return "gAAAAAB" + b
+    # Fallback token (still better than nothing; server may accept degraded PoW).
+    return "gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D" + base64.b64encode(seed.encode()).decode()
+
+
+async def _chat_requirements(s: AsyncSession, token: str, cookies: dict, device: str, ua: str) -> dict:
+    h = _headers(token, device)
+    h["Content-Type"] = "application/json"
+    r = await s.post(
+        f"{_BASE}/backend-api/sentinel/chat-requirements",
+        headers=h,
+        cookies=cookies,
+        json={"p": _solve_pow("0", "0", ua)},
+        impersonate=_IMPERSONATE,
+    )
+    if r.status_code >= 400:
+        raise RuntimeError(f"chatgpt chat-requirements {r.status_code}: {r.text[:300]}")
+    return r.json()
+
+
 async def stream(req: dict) -> AsyncIterator[dict]:
     session = store.load_session("chatgpt")
     if not session:
@@ -93,8 +158,23 @@ async def stream(req: dict) -> AsyncIterator[dict]:
     cookies = _cookies(session)
     oai_device = _device_id(session)
 
+    ua = session.get("user_agent") or "Mozilla/5.0"
+
     async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
         token = await _access_token(s, cookies)
+
+        # Sentinel: fetch chat-requirements token + solve the proof-of-work.
+        reqs = await _chat_requirements(s, token, cookies, oai_device, ua)
+        req_token = reqs.get("token", "")
+        pow_cfg = reqs.get("proofofwork") or {}
+        proof_token = ""
+        if pow_cfg.get("required"):
+            proof_token = _solve_pow(pow_cfg.get("seed", ""), pow_cfg.get("difficulty", ""), ua)
+        if (reqs.get("arkose") or {}).get("required"):
+            raise RuntimeError(
+                "chatgpt requires an Arkose challenge for this model/account — "
+                "not solvable headlessly. Try gpt-4o-mini, or use the Claude provider."
+            )
 
         payload = {
             "action": "next",
@@ -109,10 +189,17 @@ async def stream(req: dict) -> AsyncIterator[dict]:
             "suggestions": [],
         }
 
+        h = _headers(token, oai_device)
+        h["Content-Type"] = "application/json"
+        if req_token:
+            h["Openai-Sentinel-Chat-Requirements-Token"] = req_token
+        if proof_token:
+            h["Openai-Sentinel-Proof-Token"] = proof_token
+
         url = f"{_BASE}/backend-api/conversation"
         last_text = ""
         async with s.stream(
-            "POST", url, headers=_headers(token, oai_device), cookies=cookies, json=payload, impersonate=_IMPERSONATE
+            "POST", url, headers=h, cookies=cookies, json=payload, impersonate=_IMPERSONATE
         ) as resp:
             if resp.status_code >= 400:
                 body = await resp.atext()
