@@ -2,10 +2,9 @@ import json
 import uuid
 from typing import AsyncIterator
 
-import httpx
+from curl_cffi.requests import AsyncSession
 
 from .. import store
-from ..harvester import cookie_header
 
 NAME = "chatgpt"
 MODELS = [
@@ -21,16 +20,24 @@ MODELS = [
 
 _BASE = "https://chatgpt.com"
 _DOMAINS = ("chatgpt.com", "chat.openai.com", "openai.com")
+_IMPERSONATE = "chrome"
 
 
-def _headers(session: dict, access_token: str | None = None, oai_device: str | None = None) -> dict:
+def _cookies(session: dict) -> dict:
+    out = {}
+    for c in session.get("cookies", []):
+        dom = (c.get("domain") or "").lstrip(".")
+        if any(dom.endswith(d) for d in _DOMAINS):
+            out[c["name"]] = c["value"]
+    return out
+
+
+def _headers(access_token: str | None = None, oai_device: str | None = None) -> dict:
     h = {
-        "User-Agent": session.get("user_agent") or "Mozilla/5.0",
         "Accept": "text/event-stream",
         "Accept-Language": "en-US,en;q=0.9",
         "Origin": _BASE,
         "Referer": f"{_BASE}/",
-        "Cookie": cookie_header(session, _DOMAINS),
     }
     if access_token:
         h["Authorization"] = f"Bearer {access_token}"
@@ -40,8 +47,8 @@ def _headers(session: dict, access_token: str | None = None, oai_device: str | N
     return h
 
 
-async def _access_token(client: httpx.AsyncClient, session: dict) -> str:
-    r = await client.get(f"{_BASE}/api/auth/session", headers=_headers(session))
+async def _access_token(s: AsyncSession, cookies: dict) -> str:
+    r = await s.get(f"{_BASE}/api/auth/session", headers=_headers(), cookies=cookies, impersonate=_IMPERSONATE)
     if r.status_code != 200:
         raise RuntimeError(f"chatgpt auth/session {r.status_code} — re-connect in dashboard")
     data = r.json()
@@ -83,10 +90,11 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
     model = req.get("model", "gpt-4o")
     parts = _to_parts(req.get("messages", []))
+    cookies = _cookies(session)
     oai_device = _device_id(session)
 
-    async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(120.0, read=300.0), follow_redirects=True) as client:
-        token = await _access_token(client, session)
+    async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
+        token = await _access_token(s, cookies)
 
         payload = {
             "action": "next",
@@ -103,11 +111,16 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
         url = f"{_BASE}/backend-api/conversation"
         last_text = ""
-        async with client.stream("POST", url, headers=_headers(session, token, oai_device), json=payload) as resp:
+        async with s.stream(
+            "POST", url, headers=_headers(token, oai_device), cookies=cookies, json=payload, impersonate=_IMPERSONATE
+        ) as resp:
             if resp.status_code >= 400:
-                body = await resp.aread()
-                raise RuntimeError(f"chatgpt error {resp.status_code}: {body[:400]!r}")
+                body = await resp.atext()
+                raise RuntimeError(f"chatgpt error {resp.status_code}: {body[:400]}")
             async for line in resp.aiter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                line = line.strip()
                 if not line or not line.startswith("data:"):
                     continue
                 data = line[5:].strip()

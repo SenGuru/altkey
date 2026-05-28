@@ -3,16 +3,16 @@ import re
 import uuid
 from typing import AsyncIterator
 
-import httpx
+from curl_cffi.requests import AsyncSession
 
 from .. import store
-from ..harvester import cookie_header
 
 NAME = "gemini"
 MODELS = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
 
 _BASE = "https://gemini.google.com"
 _DOMAINS = ("google.com",)
+_IMPERSONATE = "chrome"
 _SNLM_RE = re.compile(r'"SNlM0e":"([^"]+)"')
 
 _MODEL_HEADER = {
@@ -23,23 +23,30 @@ _MODEL_HEADER = {
 }
 
 
-def _headers(session: dict, content_type: str | None = None) -> dict:
+def _cookies(session: dict) -> dict:
+    out = {}
+    for c in session.get("cookies", []):
+        dom = (c.get("domain") or "").lstrip(".")
+        if any(dom.endswith(d) for d in _DOMAINS):
+            out[c["name"]] = c["value"]
+    return out
+
+
+def _headers(content_type: str | None = None) -> dict:
     h = {
-        "User-Agent": session.get("user_agent") or "Mozilla/5.0",
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.9",
         "Origin": _BASE,
         "Referer": f"{_BASE}/app",
         "X-Same-Domain": "1",
-        "Cookie": cookie_header(session, _DOMAINS),
     }
     if content_type:
         h["Content-Type"] = content_type
     return h
 
 
-async def _snlm0e(client: httpx.AsyncClient, session: dict) -> str:
-    r = await client.get(f"{_BASE}/app", headers=_headers(session))
+async def _snlm0e(s: AsyncSession, cookies: dict) -> str:
+    r = await s.get(f"{_BASE}/app", headers=_headers(), cookies=cookies, impersonate=_IMPERSONATE)
     if r.status_code != 200:
         raise RuntimeError(f"gemini /app {r.status_code} — re-connect in dashboard")
     m = _SNLM_RE.search(r.text)
@@ -69,9 +76,10 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
     model = req.get("model", "gemini-2.5-flash")
     prompt = _flatten(req.get("messages", []))
+    cookies = _cookies(session)
 
-    async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(180.0, read=300.0), follow_redirects=True) as client:
-        snlm = await _snlm0e(client, session)
+    async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
+        snlm = await _snlm0e(s, cookies)
         model_hdr = _MODEL_HEADER.get(model, _MODEL_HEADER["gemini-2.5-flash"])
         req_id = str(int(uuid.uuid4().int % 1_000_000))
 
@@ -82,18 +90,22 @@ async def stream(req: dict) -> AsyncIterator[dict]:
         params = {"bl": "boq_assistant-bard-web-server", "_reqid": req_id, "rt": "c"}
 
         last_text = ""
-        async with client.stream(
+        async with s.stream(
             "POST",
             url,
-            headers=_headers(session, "application/x-www-form-urlencoded;charset=UTF-8"),
+            headers=_headers("application/x-www-form-urlencoded;charset=UTF-8"),
+            cookies=cookies,
             params=params,
             data=form,
+            impersonate=_IMPERSONATE,
         ) as resp:
             if resp.status_code >= 400:
-                body = await resp.aread()
-                raise RuntimeError(f"gemini error {resp.status_code}: {body[:400]!r}")
+                body = await resp.atext()
+                raise RuntimeError(f"gemini error {resp.status_code}: {body[:400]}")
             buf = ""
-            async for chunk in resp.aiter_text():
+            async for chunk in resp.aiter_content():
+                if isinstance(chunk, bytes):
+                    chunk = chunk.decode("utf-8", "ignore")
                 buf += chunk
                 while True:
                     nl = buf.find("\n")

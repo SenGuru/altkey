@@ -3,10 +3,9 @@ import time
 import uuid
 from typing import AsyncIterator
 
-import httpx
+from curl_cffi.requests import AsyncSession
 
 from .. import store
-from ..harvester import cookie_header
 
 NAME = "claude"
 MODELS = [
@@ -19,23 +18,50 @@ MODELS = [
 
 _BASE = "https://claude.ai"
 _DOMAINS = ("claude.ai",)
+_IMPERSONATE = "chrome"
+
+# claude.ai web backend uses its own model identifiers, distinct from the
+# public API names, and availability varies per account/plan. Map our
+# OpenAI-style aliases to web identifiers verified against a live account.
+# If a request hits model_not_available, stream() auto-retries with the model
+# field omitted so the account default is used — never a hard failure.
+_WEB_MODEL = {
+    "claude-opus-4-5": "claude-opus-4-5",
+    "claude-sonnet-4-5": "claude-sonnet-4-20250514",
+    "claude-sonnet-4": "claude-sonnet-4-20250514",
+    "claude-haiku-4-5": "claude-haiku-4-5",
+}
 
 
-def _headers(session: dict) -> dict:
+class _ModelNotAvailable(Exception):
+    pass
+
+
+def _cookies(session: dict) -> dict:
+    out = {}
+    for c in session.get("cookies", []):
+        dom = (c.get("domain") or "").lstrip(".")
+        if any(dom.endswith(d) for d in _DOMAINS):
+            out[c["name"]] = c["value"]
+    return out
+
+
+def _headers() -> dict:
+    # curl_cffi's impersonate sets UA + sec-ch-* + TLS fingerprint to match
+    # Chrome; we only add what the app expects on top.
     return {
-        "User-Agent": session.get("user_agent") or "Mozilla/5.0",
         "Accept": "text/event-stream, application/json",
         "Accept-Language": "en-US,en;q=0.9",
         "Content-Type": "application/json",
         "Origin": _BASE,
         "Referer": f"{_BASE}/chats",
-        "Cookie": cookie_header(session, _DOMAINS),
     }
 
 
-async def _org_id(client: httpx.AsyncClient, session: dict) -> str:
-    r = await client.get(f"{_BASE}/api/organizations", headers=_headers(session))
-    r.raise_for_status()
+async def _org_id(s: AsyncSession, cookies: dict) -> str:
+    r = await s.get(f"{_BASE}/api/organizations", headers=_headers(), cookies=cookies, impersonate=_IMPERSONATE)
+    if r.status_code >= 400:
+        raise RuntimeError(f"claude /organizations {r.status_code}: {r.text[:300]}")
     orgs = r.json()
     if not orgs:
         raise RuntimeError("no claude organizations found on this account")
@@ -66,6 +92,80 @@ def _flatten(messages: list[dict]) -> tuple[str, str]:
     return ("\n\n".join(sys_parts), prompt)
 
 
+def _base_payload(prompt: str, system: str) -> dict:
+    payload = {
+        "prompt": prompt,
+        "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
+        "timezone": "America/Los_Angeles",
+        "attachments": [],
+        "files": [],
+        "sync_sources": [],
+        "rendering_mode": "messages",
+    }
+    if system:
+        payload["personalized_styles"] = [{"key": "custom", "instructions": system}]
+    return payload
+
+
+async def _attempt(s: AsyncSession, org: str, cookies: dict, payload: dict) -> AsyncIterator[dict]:
+    conv_id = str(uuid.uuid4())
+    r = await s.post(
+        f"{_BASE}/api/organizations/{org}/chat_conversations",
+        headers=_headers(),
+        cookies=cookies,
+        json={"uuid": conv_id, "name": ""},
+        impersonate=_IMPERSONATE,
+    )
+    if r.status_code >= 400:
+        raise RuntimeError(f"claude conversation create {r.status_code}: {r.text[:300]}")
+
+    url = f"{_BASE}/api/organizations/{org}/chat_conversations/{conv_id}/completion"
+    try:
+        async with s.stream(
+            "POST", url, headers=_headers(), cookies=cookies, json=payload, impersonate=_IMPERSONATE
+        ) as resp:
+            if resp.status_code >= 400:
+                body = await resp.atext()
+                if "model_not_available" in body:
+                    raise _ModelNotAvailable()
+                raise RuntimeError(f"claude error {resp.status_code}: {body[:400]}")
+            async for line in resp.aiter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                line = line.strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if not data or data == "[DONE]":
+                    continue
+                try:
+                    evt = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                etype = evt.get("type")
+                if etype == "completion":
+                    chunk = evt.get("completion", "")
+                    if chunk:
+                        yield {"delta": chunk}
+                elif etype == "content_block_delta":
+                    d = evt.get("delta") or {}
+                    if d.get("type") == "text_delta":
+                        yield {"delta": d.get("text", "")}
+                elif etype == "message_stop":
+                    break
+    finally:
+        try:
+            await s.request(
+                "DELETE",
+                f"{_BASE}/api/organizations/{org}/chat_conversations/{conv_id}",
+                headers=_headers(),
+                cookies=cookies,
+                impersonate=_IMPERSONATE,
+            )
+        except Exception:
+            pass
+
+
 async def stream(req: dict) -> AsyncIterator[dict]:
     session = store.load_session("claude")
     if not session:
@@ -73,66 +173,27 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
     model = req.get("model", "claude-sonnet-4-5")
     system, prompt = _flatten(req.get("messages", []))
+    cookies = _cookies(session)
 
-    async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(120.0, read=300.0)) as client:
-        org = await _org_id(client, session)
+    async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
+        org = await _org_id(s, cookies)
 
-        conv_id = str(uuid.uuid4())
-        r = await client.post(
-            f"{_BASE}/api/organizations/{org}/chat_conversations",
-            headers=_headers(session),
-            json={"uuid": conv_id, "name": ""},
-        )
-        r.raise_for_status()
+        payload = _base_payload(prompt, system)
+        web_model = _WEB_MODEL.get(model)
+        if web_model:
+            payload["model"] = web_model
 
-        payload = {
-            "prompt": prompt,
-            "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
-            "timezone": "America/Los_Angeles",
-            "attachments": [],
-            "files": [],
-            "sync_sources": [],
-            "rendering_mode": "messages",
-            "model": model,
-        }
-        if system:
-            payload["personalized_styles"] = [{"key": "custom", "instructions": system}]
-
-        url = f"{_BASE}/api/organizations/{org}/chat_conversations/{conv_id}/completion"
-        try:
-            async with client.stream("POST", url, headers=_headers(session), json=payload) as resp:
-                if resp.status_code >= 400:
-                    body = await resp.aread()
-                    raise RuntimeError(f"claude error {resp.status_code}: {body[:400]!r}")
-                async for line in resp.aiter_lines():
-                    if not line or not line.startswith("data:"):
-                        continue
-                    data = line[5:].strip()
-                    if not data or data == "[DONE]":
-                        continue
-                    try:
-                        evt = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-                    etype = evt.get("type")
-                    if etype == "completion":
-                        chunk = evt.get("completion", "")
-                        if chunk:
-                            yield {"delta": chunk}
-                    elif etype == "content_block_delta":
-                        d = evt.get("delta") or {}
-                        if d.get("type") == "text_delta":
-                            yield {"delta": d.get("text", "")}
-                    elif etype == "message_stop":
-                        break
-        finally:
+        if "model" in payload:
             try:
-                await client.delete(
-                    f"{_BASE}/api/organizations/{org}/chat_conversations/{conv_id}",
-                    headers=_headers(session),
-                )
-            except Exception:
-                pass
+                async for d in _attempt(s, org, cookies, payload):
+                    yield d
+                return
+            except _ModelNotAvailable:
+                pass  # fall through: retry with account default (no model field)
+
+        default_payload = _base_payload(prompt, system)
+        async for d in _attempt(s, org, cookies, default_payload):
+            yield d
 
 
 def openai_chunk(model: str, delta_text: str, finish: str | None = None) -> dict:
