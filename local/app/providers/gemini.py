@@ -3,9 +3,13 @@ import re
 import uuid
 from typing import AsyncIterator
 
+from curl_cffi import CurlMime
 from curl_cffi.requests import AsyncSession
 
 from .. import store
+
+_PUSH_URL = "https://content-push.googleapis.com/upload/"
+_PUSH_ID = "feeds/mcudyrk2a4khkz"
 
 NAME = "gemini"
 MODELS = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
@@ -55,6 +59,27 @@ async def _snlm0e(s: AsyncSession, cookies: dict) -> str:
     return m.group(1)
 
 
+async def _upload_image(s: AsyncSession, data: bytes, mime: str) -> str:
+    """Upload to Google's content-push endpoint. Returns the file identifier
+    string used inside f.req. No cookies needed for this bucket."""
+    ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}.get(mime, "png")
+    filename = f"image-{uuid.uuid4().hex[:8]}.{ext}"
+    mp = CurlMime()
+    mp.addpart(name="file", content_type=mime, filename=filename, data=data)
+    try:
+        r = await s.post(
+            _PUSH_URL,
+            headers={"Push-ID": _PUSH_ID},
+            multipart=mp,
+            impersonate=_IMPERSONATE,
+        )
+    finally:
+        mp.close()
+    if r.status_code >= 400:
+        raise RuntimeError(f"gemini image upload {r.status_code}: {r.text[:200]}")
+    return r.text.strip()
+
+
 def _flatten(messages: list[dict]) -> str:
     parts = []
     for m in messages:
@@ -74,18 +99,30 @@ async def stream(req: dict) -> AsyncIterator[dict]:
     if not session:
         raise RuntimeError("gemini not connected — open the dashboard and click Connect Gemini")
 
+    from ._imgutil import extract_images
+
     model = req.get("model", "gemini-2.5-flash")
-    prompt = _flatten(req.get("messages", []))
+    messages = req.get("messages", [])
+    prompt = _flatten(messages)
     cookies = _cookies(session)
+    images = extract_images(messages)
 
     async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
         snlm = await _snlm0e(s, cookies)
         req_id = str(int(uuid.uuid4().int % 1_000_000))
 
-        # Simple f.req: [[prompt], None, None] for a fresh conversation.
-        # Model selection is via the x-goog-ext header, not the body. When the
-        # model is unknown we omit the header → account's default Gemini model.
-        inner = [[prompt], None, None]
+        uploaded = []
+        for data, mime in images:
+            ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}.get(mime, "png")
+            fid = await _upload_image(s, data, mime)
+            uploaded.append([[fid], f"image-{uuid.uuid4().hex[:8]}.{ext}"])
+
+        # f.req for a fresh conversation. With images, the prompt slot becomes
+        # [prompt, 0, None, [[[fid], filename], ...]]; otherwise just [prompt].
+        if uploaded:
+            inner = [[prompt, 0, None, uploaded], None, None]
+        else:
+            inner = [[prompt], None, None]
         f_req = json.dumps([None, json.dumps(inner)])
         form = {"f.req": f_req, "at": snlm}
         url = f"{_BASE}/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"

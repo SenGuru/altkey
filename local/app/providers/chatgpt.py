@@ -1,11 +1,15 @@
+import asyncio
 import base64
+import binascii
 import hashlib
 import json
 import random
+import struct
 import time
 import uuid
 from typing import AsyncIterator
 
+from curl_cffi import CurlHttpVersion
 from curl_cffi.requests import AsyncSession
 
 from .. import store
@@ -62,22 +66,122 @@ async def _access_token(s: AsyncSession, cookies: dict) -> str:
     return token
 
 
-def _to_parts(messages: list[dict]) -> list[dict]:
+def _msg_text(content) -> str:
+    if isinstance(content, list):
+        return "".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return content if isinstance(content, str) else str(content)
+
+
+def _to_parts(messages: list[dict], attachments: list[dict] | None = None) -> list[dict]:
+    """Build ChatGPT message objects. If `attachments` is given (uploaded image
+    metadata), the LAST user message becomes multimodal_text with asset
+    pointers, and the files are recorded in metadata.attachments."""
     out = []
-    for m in messages:
+    last_user_idx = max((i for i, m in enumerate(messages) if m.get("role") == "user"), default=-1)
+    for i, m in enumerate(messages):
         role = m.get("role", "user")
-        content = m.get("content")
-        if isinstance(content, list):
-            content = "".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
-        if not isinstance(content, str):
-            content = str(content)
-        out.append({
-            "id": str(uuid.uuid4()),
-            "author": {"role": "system" if role == "system" else ("assistant" if role == "assistant" else "user")},
-            "content": {"content_type": "text", "parts": [content]},
-            "metadata": {},
-        })
+        author = "system" if role == "system" else ("assistant" if role == "assistant" else "user")
+        text = _msg_text(m.get("content"))
+        if attachments and i == last_user_idx:
+            asset_parts = [
+                {
+                    "content_type": "image_asset_pointer",
+                    "asset_pointer": f"file-service://{a['id']}",
+                    "size_bytes": a["size"],
+                    "width": a["width"],
+                    "height": a["height"],
+                }
+                for a in attachments
+            ]
+            out.append({
+                "id": str(uuid.uuid4()),
+                "author": {"role": author},
+                "content": {"content_type": "multimodal_text", "parts": [*asset_parts, text]},
+                "metadata": {"attachments": [
+                    {"id": a["id"], "name": a["name"], "size": a["size"],
+                     "mimeType": a["mime"], "width": a["width"], "height": a["height"]}
+                    for a in attachments
+                ]},
+            })
+        else:
+            out.append({
+                "id": str(uuid.uuid4()),
+                "author": {"role": author},
+                "content": {"content_type": "text", "parts": [text]},
+                "metadata": {},
+            })
     return out
+
+
+async def _upload_file(s: AsyncSession, token: str, cookies: dict, device: str, data: bytes, mime: str) -> dict:
+    from ._imgutil import image_size
+
+    w, h = image_size(data, mime)
+    ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}.get(mime, "png")
+    name = f"image-{uuid.uuid4().hex[:8]}.{ext}"
+    h_json = _headers(token, device)
+    h_json["Content-Type"] = "application/json"
+
+    # 1) Register the file → get an Azure blob upload URL.
+    r = await s.post(
+        f"{_BASE}/backend-api/files",
+        headers=h_json,
+        cookies=cookies,
+        json={"file_name": name, "file_size": len(data), "use_case": "multimodal",
+              "timezone_offset_min": 420, "reset_rate_limits": False},
+        impersonate=_IMPERSONATE,
+    )
+    if r.status_code >= 400:
+        raise RuntimeError(f"chatgpt files register {r.status_code}: {r.text[:300]}")
+    reg = r.json()
+    file_id = reg["file_id"]
+    upload_url = reg["upload_url"]
+
+    # 2) PUT the bytes to the upload URL. The CDN is flaky; retry across
+    # transports using a FRESH session each time (reusing the main impersonated
+    # session for a different host triggers TLS errors).
+    put_headers = {"x-ms-blob-type": "BlockBlob", "x-ms-version": "2020-04-08", "Content-Type": mime}
+    last_err = None
+    ok = False
+    for attempt in range(4):
+        try:
+            if attempt % 2 == 0:
+                async with AsyncSession(timeout=120) as bs:
+                    p = await bs.put(upload_url, headers=put_headers, data=data, impersonate=_IMPERSONATE)
+            else:
+                async with AsyncSession(timeout=120, http_version=CurlHttpVersion.V1_1) as bs:
+                    p = await bs.put(upload_url, headers=put_headers, data=data)
+            if p.status_code < 400:
+                ok = True
+                break
+            last_err = f"{p.status_code}: {p.text[:150]}"
+        except Exception as e:
+            last_err = str(e)[:150]
+        await asyncio.sleep(0.4)
+    if not ok:
+        raise RuntimeError(f"chatgpt blob upload failed after retries: {last_err}")
+
+    # 3) Mark the upload complete.
+    done = await s.post(
+        f"{_BASE}/backend-api/files/{file_id}/uploaded",
+        headers=h_json,
+        cookies=cookies,
+        json={},
+        impersonate=_IMPERSONATE,
+    )
+    if done.status_code >= 400:
+        raise RuntimeError(f"chatgpt files finalize {done.status_code}: {done.text[:200]}")
+
+    # 4) Poll until processed (image scanning).
+    for _ in range(20):
+        chk = await s.get(f"{_BASE}/backend-api/files/{file_id}", headers=h_json, cookies=cookies, impersonate=_IMPERSONATE)
+        if chk.status_code < 400:
+            st = (chk.json() or {}).get("retrieval_status") or (chk.json() or {}).get("status")
+            if st in ("success", "processed", None):
+                break
+        await asyncio.sleep(0.5)
+
+    return {"id": file_id, "name": name, "size": len(data), "mime": mime, "width": w, "height": h}
 
 
 def _device_id(session: dict) -> str:
@@ -153,15 +257,23 @@ async def stream(req: dict) -> AsyncIterator[dict]:
     if not session:
         raise RuntimeError("chatgpt not connected — open the dashboard and click Connect ChatGPT")
 
+    from ._imgutil import extract_images
+
     model = req.get("model", "gpt-4o")
-    parts = _to_parts(req.get("messages", []))
+    messages = req.get("messages", [])
     cookies = _cookies(session)
     oai_device = _device_id(session)
+    images = extract_images(messages)
 
     ua = session.get("user_agent") or "Mozilla/5.0"
 
     async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
         token = await _access_token(s, cookies)
+
+        attachments = []
+        for data, mime in images:
+            attachments.append(await _upload_file(s, token, cookies, oai_device, data, mime))
+        parts = _to_parts(messages, attachments or None)
 
         # Sentinel: fetch chat-requirements token + solve the proof-of-work.
         reqs = await _chat_requirements(s, token, cookies, oai_device, ua)
