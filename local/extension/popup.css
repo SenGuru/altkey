@@ -1,0 +1,40 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  font: 13px/1.5 ui-sans-serif, system-ui, sans-serif;
+  background: #0b0c0f; color: #e6e8eb; margin: 0; width: 340px;
+}
+.wrap { padding: 16px 18px; }
+.head { display: flex; align-items: center; justify-content: space-between; }
+h1 { font-size: 16px; margin: 0; letter-spacing: -0.01em; }
+.sub { color: #8a93a0; font-size: 12px; margin: 6px 0 14px; }
+.pill {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: #1a1d23; color: #8a93a0;
+}
+.pill.ok { background: #0f2a18; color: #4ade80; }
+.pill.bad { background: #2a1212; color: #f87171; }
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+}
+.row + .row { border-top: 1px solid #1a1d23; }
+.name { font-weight: 600; }
+.meta { color: #8a93a0; font-size: 11px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.dot.on { background: #22c55e; } .dot.off { background: #4a525f; }
+button {
+  background: #3b82f6; color: white; border: 0;
+  padding: 7px 13px; border-radius: 7px; cursor: pointer; font: inherit;
+}
+button.ghost { background: transparent; color: #8a93a0; border: 1px solid #2a2f38; }
+button.link { background: transparent; color: #8a93a0; padding: 4px 0; border: 0; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.footer { margin-top: 14px; border-top: 1px solid #1a1d23; padding-top: 10px; }
+.lbl { display: block; color: #8a93a0; font-size: 11px; margin: 8px 0 4px; }
+input {
+  width: 100%; background: #0f1116; border: 1px solid #2a2f38; color: #e6e8eb;
+  padding: 7px 10px; border-radius: 7px; font: inherit; margin-bottom: 8px;
+}
+.toast { font-size: 12px; margin-top: 8px; min-height: 16px; }
+.toast.err { color: #f87171; } .toast.ok { color: #4ade80; }

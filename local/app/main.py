@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from . import providers, store
@@ -15,6 +16,15 @@ from .providers.claude import openai_chunk
 store.init()
 
 app = FastAPI(title="altkey", docs_url=None, redoc_url=None)
+
+# Allow the companion browser extension (chrome-extension:// / moz-extension://)
+# to call the admin capture endpoint. Server is bound to 127.0.0.1 only.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^(chrome-extension|moz-extension)://.*$",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DASHBOARD = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
 
@@ -108,6 +118,108 @@ async def admin_connect(body: ConnectReq):
 async def admin_disconnect(body: ConnectReq):
     store.delete_session(body.provider)
     return {"ok": True}
+
+
+_IMPORT_DOMAIN = {
+    "claude": ".claude.ai",
+    "chatgpt": ".chatgpt.com",
+    "gemini": ".google.com",
+}
+_IMPORT_REQUIRED = {
+    "claude": ["sessionKey"],
+    "chatgpt": ["__Secure-next-auth.session-token"],
+    "gemini": ["__Secure-1PSID"],
+}
+_DEFAULT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
+
+
+class ImportReq(BaseModel):
+    provider: str
+    cookies: str
+    user_agent: str = ""
+
+
+def _parse_cookie_string(s: str) -> list[tuple[str, str]]:
+    out = []
+    for part in s.replace("\n", ";").split(";"):
+        part = part.strip()
+        if not part or "=" not in part:
+            continue
+        name, _, value = part.partition("=")
+        name = name.strip()
+        value = value.strip()
+        if name:
+            out.append((name, value))
+    return out
+
+
+class CaptureCookie(BaseModel):
+    name: str
+    value: str
+    domain: str = ""
+    path: str = "/"
+    secure: bool = True
+
+
+class CaptureReq(BaseModel):
+    provider: str
+    cookies: list[CaptureCookie]
+    user_agent: str = ""
+
+
+@app.post("/admin/capture")
+async def admin_capture(body: CaptureReq):
+    """Companion-extension entrypoint. Receives structured cookies read via the
+    browser's chrome.cookies API after an explicit user 'Connect' click."""
+    if body.provider not in _IMPORT_DOMAIN:
+        return JSONResponse({"ok": False, "error": f"unknown provider: {body.provider}"}, status_code=400)
+    have = {c.name for c in body.cookies}
+    missing = [c for c in _IMPORT_REQUIRED[body.provider] if c not in have]
+    if missing:
+        return JSONResponse(
+            {"ok": False, "error": f"not logged in — missing: {', '.join(missing)}"},
+            status_code=400,
+        )
+    cookies = [
+        {
+            "name": c.name,
+            "value": c.value,
+            "domain": c.domain or _IMPORT_DOMAIN[body.provider],
+            "path": c.path or "/",
+            "secure": c.secure,
+        }
+        for c in body.cookies
+    ]
+    store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
+    return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
+
+
+@app.post("/admin/import")
+async def admin_import(body: ImportReq):
+    if body.provider not in _IMPORT_DOMAIN:
+        return JSONResponse({"ok": False, "error": f"unknown provider: {body.provider}"}, status_code=400)
+    pairs = _parse_cookie_string(body.cookies)
+    if not pairs:
+        return JSONResponse({"ok": False, "error": "no cookies parsed — paste name=value pairs"}, status_code=400)
+
+    have = {name for name, _ in pairs}
+    missing = [c for c in _IMPORT_REQUIRED[body.provider] if c not in have]
+    if missing:
+        return JSONResponse(
+            {"ok": False, "error": f"missing required cookie(s): {', '.join(missing)}"},
+            status_code=400,
+        )
+
+    domain = _IMPORT_DOMAIN[body.provider]
+    cookies = [
+        {"name": name, "value": value, "domain": domain, "path": "/", "secure": True}
+        for name, value in pairs
+    ]
+    store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
+    return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
 
 
 class MintReq(BaseModel):

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>altkey</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>altkey</h1>
+    <span id="server-state" class="pill">checking…</span>
+  </div>
+  <p class="sub">Click Connect for a provider you're logged into. Nothing is read until you click.</p>
+
+  <div id="providers"></div>
+
+  <div class="footer">
+    <button id="settings-toggle" class="link">Settings</button>
+    <div id="settings" hidden>
+      <label class="lbl">Local altkey URL</label>
+      <input id="server-url" placeholder="http://127.0.0.1:8787" />
+      <button id="save-url">Save</button>
+    </div>
+  </div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

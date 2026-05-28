@@ -35,12 +35,40 @@ async def harvest(provider: str, on_status: Callable[[str], None] | None = None)
     profile_dir = store.DATA_DIR / "profiles" / provider
     profile_dir.mkdir(parents=True, exist_ok=True)
 
+    # Anti-detection: use the real installed Chrome (far less likely to trip
+    # Cloudflare Turnstile than Playwright's bundled Chromium), drop the
+    # automation flags, and strip navigator.webdriver before any page script
+    # runs. A persistent profile also accumulates trust over repeat logins.
+    launch_kwargs = dict(
+        user_data_dir=str(profile_dir),
+        headless=False,
+        no_viewport=True,
+        ignore_default_args=["--enable-automation"],
+        args=[
+            "--disable-blink-features=AutomationControlled",
+            "--start-maximized",
+            "--no-default-browser-check",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ],
+    )
+
     async with async_playwright() as pw:
-        ctx = await pw.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir),
-            headless=False,
-            viewport={"width": 1100, "height": 800},
+        try:
+            ctx = await pw.chromium.launch_persistent_context(channel="chrome", **launch_kwargs)
+            say("using installed Chrome")
+        except Exception:
+            ctx = await pw.chromium.launch_persistent_context(**launch_kwargs)
+            say("installed Chrome not found — using bundled Chromium (captcha more likely)")
+
+        await ctx.add_init_script(
+            """
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+            window.chrome = window.chrome || { runtime: {} };
+            """
         )
+
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
         say(f"opening {provider} login")
         await page.goto(_LOGIN_URLS[provider])
