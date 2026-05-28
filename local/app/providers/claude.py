@@ -21,22 +21,31 @@ _IMPERSONATE = "chrome"
 # OpenAI-style aliases to web identifiers verified against a live account.
 # If a request hits model_not_available, stream() auto-retries with the model
 # field omitted so the account default is used — never a hard failure.
-# Verified web model ids for this account tier: opus-4-5, sonnet-4-20250514,
-# haiku-4-5. Map every reasonable alias (official API names included) onto them.
-_SONNET = "claude-sonnet-4-20250514"
-_OPUS = "claude-opus-4-5"
+# Latest web model ids verified available on this account (2026-05):
+# opus-4-7, sonnet-4-6, haiku-4-5. Older versions still selectable where the
+# account exposes them; everything else resolves to the latest of its family.
+_OPUS = "claude-opus-4-7"
+_SONNET = "claude-sonnet-4-6"
 _HAIKU = "claude-haiku-4-5"
 
 _WEB_MODEL = {
-    "claude-opus-4-5": _OPUS,
+    # exact, currently-available versions → honored as-is
+    "claude-opus-4-7": "claude-opus-4-7",
+    "claude-opus-4-6": "claude-opus-4-6",
+    "claude-opus-4-5": "claude-opus-4-5",
+    "claude-sonnet-4-6": "claude-sonnet-4-6",
+    "claude-sonnet-4-20250514": "claude-sonnet-4-20250514",
+    "claude-haiku-4-5": "claude-haiku-4-5",
+    # generic / older / official-API aliases → latest of the family
     "claude-opus-4-1": _OPUS,
     "claude-opus-4": _OPUS,
     "claude-3-opus": _OPUS,
     "claude-3-opus-20240229": _OPUS,
+    "claude-opus-latest": _OPUS,
     "claude-sonnet-4-5": _SONNET,
     "claude-sonnet-4-5-20250929": _SONNET,
     "claude-sonnet-4": _SONNET,
-    "claude-sonnet-4-20250514": _SONNET,
+    "claude-sonnet-latest": _SONNET,
     "claude-3-7-sonnet": _SONNET,
     "claude-3-7-sonnet-latest": _SONNET,
     "claude-3-5-sonnet": _SONNET,
@@ -44,18 +53,21 @@ _WEB_MODEL = {
     "claude-3-5-sonnet-20241022": _SONNET,
     "claude-3-5-sonnet-20240620": _SONNET,
     "claude-3-sonnet": _SONNET,
-    "claude-haiku-4-5": _HAIKU,
+    "claude-haiku-4-7": _HAIKU,
+    "claude-haiku-latest": _HAIKU,
     "claude-3-5-haiku": _HAIKU,
     "claude-3-5-haiku-latest": _HAIKU,
     "claude-3-5-haiku-20241022": _HAIKU,
     "claude-3-haiku": _HAIKU,
 }
 
-# Models surfaced via /v1/models.
+# Models surfaced via /v1/models (lead with the current generation).
 MODELS = [
-    "claude-opus-4-5",
-    "claude-sonnet-4-5",
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",
     "claude-haiku-4-5",
+    "claude-opus-4-6",
+    "claude-opus-4-5",
     "claude-3-7-sonnet",
     "claude-3-5-sonnet",
     "claude-3-5-haiku",
