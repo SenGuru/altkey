@@ -1,8 +1,11 @@
+import base64
+import binascii
 import json
 import time
 import uuid
 from typing import AsyncIterator
 
+from curl_cffi import CurlMime
 from curl_cffi.requests import AsyncSession
 
 from .. import store
@@ -58,6 +61,74 @@ def _headers() -> dict:
     }
 
 
+_EXT_BY_MIME = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+}
+
+
+def _extract_images(messages: list[dict]) -> list[tuple[bytes, str]]:
+    """Pull (bytes, mime) for every image_url part in the messages.
+    Supports data: URLs (base64). Returns [] if none."""
+    out = []
+    for m in messages:
+        content = m.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if not isinstance(part, dict) or part.get("type") != "image_url":
+                continue
+            url = (part.get("image_url") or {}).get("url", "")
+            if url.startswith("data:"):
+                try:
+                    header, b64 = url.split(",", 1)
+                    mime = header[5:].split(";")[0] or "image/png"
+                    out.append((base64.b64decode(b64), mime))
+                except (ValueError, binascii.Error):
+                    continue
+    return out
+
+
+def _upload_headers() -> dict:
+    # Multipart upload: do NOT set Content-Type (curl_cffi sets the boundary).
+    return {
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": _BASE,
+        "Referer": f"{_BASE}/new",
+    }
+
+
+async def _upload_image(s: AsyncSession, org: str, cookies: dict, data: bytes, mime: str) -> str:
+    ext = _EXT_BY_MIME.get(mime, "png")
+    filename = f"image-{uuid.uuid4().hex[:8]}.{ext}"
+    # claude.ai upload endpoint. Try the org-scoped path, fall back to legacy.
+    for path in (f"/api/{org}/upload", f"/api/organizations/{org}/upload"):
+        mp = CurlMime()
+        mp.addpart(name="file", content_type=mime, filename=filename, data=data)
+        try:
+            r = await s.post(
+                f"{_BASE}{path}",
+                headers=_upload_headers(),
+                cookies=cookies,
+                multipart=mp,
+                impersonate=_IMPERSONATE,
+            )
+        finally:
+            mp.close()
+        if r.status_code < 400:
+            j = r.json()
+            fid = j.get("file_uuid") or j.get("uuid") or j.get("file_id")
+            if fid:
+                return fid
+            raise RuntimeError(f"claude upload: unexpected response {str(j)[:200]}")
+        if r.status_code != 404:
+            raise RuntimeError(f"claude upload {r.status_code}: {r.text[:300]}")
+    raise RuntimeError("claude upload: no working upload endpoint (404)")
+
+
 async def _org_id(s: AsyncSession, cookies: dict) -> str:
     r = await s.get(f"{_BASE}/api/organizations", headers=_headers(), cookies=cookies, impersonate=_IMPERSONATE)
     if r.status_code >= 400:
@@ -92,13 +163,13 @@ def _flatten(messages: list[dict]) -> tuple[str, str]:
     return ("\n\n".join(sys_parts), prompt)
 
 
-def _base_payload(prompt: str, system: str) -> dict:
+def _base_payload(prompt: str, system: str, files: list[str] | None = None) -> dict:
     payload = {
         "prompt": prompt,
         "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
         "timezone": "America/Los_Angeles",
         "attachments": [],
-        "files": [],
+        "files": files or [],
         "sync_sources": [],
         "rendering_mode": "messages",
     }
@@ -172,13 +243,19 @@ async def stream(req: dict) -> AsyncIterator[dict]:
         raise RuntimeError("claude not connected — open the dashboard and click Connect Claude")
 
     model = req.get("model", "claude-sonnet-4-5")
-    system, prompt = _flatten(req.get("messages", []))
+    messages = req.get("messages", [])
+    system, prompt = _flatten(messages)
     cookies = _cookies(session)
+    images = _extract_images(messages)
 
     async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
         org = await _org_id(s, cookies)
 
-        payload = _base_payload(prompt, system)
+        file_ids: list[str] = []
+        for data, mime in images:
+            file_ids.append(await _upload_image(s, org, cookies, data, mime))
+
+        payload = _base_payload(prompt, system, file_ids)
         web_model = _WEB_MODEL.get(model)
         if web_model:
             payload["model"] = web_model
@@ -191,7 +268,7 @@ async def stream(req: dict) -> AsyncIterator[dict]:
             except _ModelNotAvailable:
                 pass  # fall through: retry with account default (no model field)
 
-        default_payload = _base_payload(prompt, system)
+        default_payload = _base_payload(prompt, system, file_ids)
         async for d in _attempt(s, org, cookies, default_payload):
             yield d
 
