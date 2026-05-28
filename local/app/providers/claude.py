@@ -22,14 +22,15 @@ _IMPERSONATE = "chrome"
 # If a request hits model_not_available, stream() auto-retries with the model
 # field omitted so the account default is used — never a hard failure.
 # Latest web model ids verified available on this account (2026-05):
-# opus-4-7, sonnet-4-6, haiku-4-5. Older versions still selectable where the
+# opus-4-8, sonnet-4-6, haiku-4-5. Older versions still selectable where the
 # account exposes them; everything else resolves to the latest of its family.
-_OPUS = "claude-opus-4-7"
+_OPUS = "claude-opus-4-8"
 _SONNET = "claude-sonnet-4-6"
 _HAIKU = "claude-haiku-4-5"
 
 _WEB_MODEL = {
     # exact, currently-available versions → honored as-is
+    "claude-opus-4-8": "claude-opus-4-8",
     "claude-opus-4-7": "claude-opus-4-7",
     "claude-opus-4-6": "claude-opus-4-6",
     "claude-opus-4-5": "claude-opus-4-5",
@@ -63,9 +64,10 @@ _WEB_MODEL = {
 
 # Models surfaced via /v1/models (lead with the current generation).
 MODELS = [
-    "claude-opus-4-7",
+    "claude-opus-4-8",
     "claude-sonnet-4-6",
     "claude-haiku-4-5",
+    "claude-opus-4-7",
     "claude-opus-4-6",
     "claude-opus-4-5",
     "claude-3-7-sonnet",
