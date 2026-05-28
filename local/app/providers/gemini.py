@@ -80,20 +80,29 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
     async with AsyncSession(impersonate=_IMPERSONATE, timeout=300) as s:
         snlm = await _snlm0e(s, cookies)
-        model_hdr = _MODEL_HEADER.get(model, _MODEL_HEADER["gemini-2.5-flash"])
         req_id = str(int(uuid.uuid4().int % 1_000_000))
 
-        inner = [[prompt], None, [None, None, None, [], None, None, "", 0, 0, 0, [], 0, 0, None, 0, 0, [], 0, 0, model_hdr]]
+        # Simple f.req: [[prompt], None, None] for a fresh conversation.
+        # Model selection is via the x-goog-ext header, not the body. When the
+        # model is unknown we omit the header → account's default Gemini model.
+        inner = [[prompt], None, None]
         f_req = json.dumps([None, json.dumps(inner)])
         form = {"f.req": f_req, "at": snlm}
         url = f"{_BASE}/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
         params = {"bl": "boq_assistant-bard-web-server", "_reqid": req_id, "rt": "c"}
 
+        headers = _headers("application/x-www-form-urlencoded;charset=UTF-8")
+        # Model selection via x-goog-ext header is unverified/fragile; for now we
+        # use the account's default Gemini model. (See _MODEL_HEADER TODO.)
+        model_hdr = None
+        if model_hdr:
+            headers["x-goog-ext-525001261-jspb"] = json.dumps(model_hdr)
+
         last_text = ""
         async with s.stream(
             "POST",
             url,
-            headers=_headers("application/x-www-form-urlencoded;charset=UTF-8"),
+            headers=headers,
             cookies=cookies,
             params=params,
             data=form,
