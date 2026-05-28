@@ -15,20 +15,76 @@ from curl_cffi.requests import AsyncSession
 from .. import store
 
 NAME = "chatgpt"
+
+# Models exposed via /v1/models. Real current web slugs + popular legacy/API
+# aliases so tools that hardcode older names still work.
 MODELS = [
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-thinking",
+    "gpt-5-instant",
+    "o3",
+    # legacy/API aliases (resolved to a real slug at request time):
     "gpt-4o",
     "gpt-4o-mini",
-    "gpt-4-1",
-    "gpt-4-1-mini",
-    "o1",
-    "o3",
+    "gpt-4.1",
+    "gpt-4.1-mini",
     "o4-mini",
     "chatgpt-4o-latest",
 ]
 
+# requested model name -> web backend slug. Anything not listed and not already
+# a real slug falls back via heuristics in _resolve_model().
+_ALIASES = {
+    "gpt-5": "gpt-5-5",
+    "gpt-5-thinking": "gpt-5-5-thinking",
+    "gpt-5-instant": "gpt-5-5-instant",
+    "gpt-5-mini": "gpt-5-mini",
+    "gpt-4o": "gpt-5-5",
+    "gpt-4o-latest": "gpt-5-5",
+    "chatgpt-4o-latest": "gpt-5-5",
+    "gpt-4.1": "gpt-5-5",
+    "gpt-4-1": "gpt-5-5",
+    "gpt-4.1-mini": "gpt-5-mini",
+    "gpt-4o-mini": "gpt-5-mini",
+    "o4-mini": "gpt-5-mini",
+    "o1": "gpt-5-5-thinking",
+    "o1-pro": "gpt-5-5-thinking",
+    "o3": "o3",
+    "o3-mini": "gpt-5-mini",
+}
+
+
+def _resolve_model(model: str) -> str:
+    if not model:
+        return "gpt-5-5"
+    m = model.lower()
+    # Already a real gpt-5 web slug → pass through unchanged.
+    if m.startswith("gpt-5"):
+        return model
+    if m in _ALIASES:
+        return _ALIASES[m]
+    if m.startswith("o3"):
+        return "o3"
+    if "mini" in m:
+        return "gpt-5-mini"
+    if "think" in m or m.startswith("o1") or m.startswith("o4"):
+        return "gpt-5-5-thinking"
+    return "gpt-5-5"
+
+
 _BASE = "https://chatgpt.com"
 _DOMAINS = ("chatgpt.com", "chat.openai.com", "openai.com")
 _IMPERSONATE = "chrome"
+
+
+async def fetch_available_models(s: "AsyncSession", token: str, cookies: dict, device: str) -> list[str]:
+    """Live list of model slugs this account can actually use."""
+    r = await s.get(f"{_BASE}/backend-api/models", headers=_headers(token, device), cookies=cookies, impersonate=_IMPERSONATE)
+    if r.status_code >= 400:
+        return []
+    data = r.json()
+    return [m.get("slug") for m in (data.get("models") or []) if isinstance(m, dict) and m.get("slug")]
 
 
 def _cookies(session: dict) -> dict:
@@ -259,7 +315,7 @@ async def stream(req: dict) -> AsyncIterator[dict]:
 
     from ._imgutil import extract_images
 
-    model = req.get("model", "gpt-4o")
+    model = _resolve_model(req.get("model", "gpt-5"))
     messages = req.get("messages", [])
     cookies = _cookies(session)
     oai_device = _device_id(session)

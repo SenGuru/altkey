@@ -11,13 +11,6 @@ from curl_cffi.requests import AsyncSession
 from .. import store
 
 NAME = "claude"
-MODELS = [
-    "claude-opus-4-5",
-    "claude-sonnet-4-5",
-    "claude-haiku-4-5",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
-]
 
 _BASE = "https://claude.ai"
 _DOMAINS = ("claude.ai",)
@@ -28,12 +21,58 @@ _IMPERSONATE = "chrome"
 # OpenAI-style aliases to web identifiers verified against a live account.
 # If a request hits model_not_available, stream() auto-retries with the model
 # field omitted so the account default is used — never a hard failure.
+# Verified web model ids for this account tier: opus-4-5, sonnet-4-20250514,
+# haiku-4-5. Map every reasonable alias (official API names included) onto them.
+_SONNET = "claude-sonnet-4-20250514"
+_OPUS = "claude-opus-4-5"
+_HAIKU = "claude-haiku-4-5"
+
 _WEB_MODEL = {
-    "claude-opus-4-5": "claude-opus-4-5",
-    "claude-sonnet-4-5": "claude-sonnet-4-20250514",
-    "claude-sonnet-4": "claude-sonnet-4-20250514",
-    "claude-haiku-4-5": "claude-haiku-4-5",
+    "claude-opus-4-5": _OPUS,
+    "claude-opus-4-1": _OPUS,
+    "claude-opus-4": _OPUS,
+    "claude-3-opus": _OPUS,
+    "claude-3-opus-20240229": _OPUS,
+    "claude-sonnet-4-5": _SONNET,
+    "claude-sonnet-4-5-20250929": _SONNET,
+    "claude-sonnet-4": _SONNET,
+    "claude-sonnet-4-20250514": _SONNET,
+    "claude-3-7-sonnet": _SONNET,
+    "claude-3-7-sonnet-latest": _SONNET,
+    "claude-3-5-sonnet": _SONNET,
+    "claude-3-5-sonnet-latest": _SONNET,
+    "claude-3-5-sonnet-20241022": _SONNET,
+    "claude-3-5-sonnet-20240620": _SONNET,
+    "claude-3-sonnet": _SONNET,
+    "claude-haiku-4-5": _HAIKU,
+    "claude-3-5-haiku": _HAIKU,
+    "claude-3-5-haiku-latest": _HAIKU,
+    "claude-3-5-haiku-20241022": _HAIKU,
+    "claude-3-haiku": _HAIKU,
 }
+
+# Models surfaced via /v1/models.
+MODELS = [
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-haiku-4-5",
+    "claude-3-7-sonnet",
+    "claude-3-5-sonnet",
+    "claude-3-5-haiku",
+]
+
+
+def _resolve_model(model: str) -> str:
+    if model in _WEB_MODEL:
+        return _WEB_MODEL[model]
+    m = (model or "").lower()
+    if "opus" in m:
+        return _OPUS
+    if "haiku" in m:
+        return _HAIKU
+    if "sonnet" in m:
+        return _SONNET
+    return _SONNET
 
 
 class _ModelNotAvailable(Exception):
@@ -256,9 +295,7 @@ async def stream(req: dict) -> AsyncIterator[dict]:
             file_ids.append(await _upload_image(s, org, cookies, data, mime))
 
         payload = _base_payload(prompt, system, file_ids)
-        web_model = _WEB_MODEL.get(model)
-        if web_model:
-            payload["model"] = web_model
+        payload["model"] = _resolve_model(model)
 
         if "model" in payload:
             try:

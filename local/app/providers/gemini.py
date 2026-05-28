@@ -12,7 +12,18 @@ _PUSH_URL = "https://content-push.googleapis.com/upload/"
 _PUSH_ID = "feeds/mcudyrk2a4khkz"
 
 NAME = "gemini"
-MODELS = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+# All names are accepted and never error; under the hood they currently route
+# to the account's default Gemini model (fine-grained selection via the
+# x-goog-ext header is not yet wired — see stream()).
+MODELS = [
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-thinking",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-pro",
+]
 
 _BASE = "https://gemini.google.com"
 _DOMAINS = ("google.com",)
