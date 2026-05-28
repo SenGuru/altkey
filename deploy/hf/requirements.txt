@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.32
+curl_cffi>=0.7
+httpx[http2]>=0.27
+cryptography>=43
+pydantic>=2.9
+python-multipart>=0.0.12
+jinja2>=3.1

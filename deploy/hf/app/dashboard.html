@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>altkey</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; background:#0b0c0f; color:#e6e8eb; margin:0; padding:48px 24px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing:-0.01em; }
+  .sub { color:#8a93a0; margin-bottom: 32px; }
+  .card { background:#13151a; border:1px solid #1f232b; border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .row + .row { margin-top: 10px; padding-top: 10px; border-top:1px solid #1a1d23; }
+  .name { font-weight: 600; }
+  .meta { color:#8a93a0; font-size: 13px; }
+  button { background:#3b82f6; color:white; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; font:inherit; }
+  button.ghost { background:transparent; color:#8a93a0; border:1px solid #2a2f38; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+  .dot.on { background:#22c55e; } .dot.off { background:#4a525f; }
+  code { background:#0f1116; padding:2px 6px; border-radius:6px; font-size: 13px; }
+  .keyrow { display:flex; gap:8px; align-items:center; }
+  .keyrow code { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .warn { background:#2a1d12; border:1px solid #5a3a1d; color:#f5c178; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom: 20px; }
+  input { background:#0f1116; border:1px solid #2a2f38; color:#e6e8eb; padding:7px 10px; border-radius:7px; font:inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>altkey</h1>
+  <div class="sub">Turn your AI subscriptions into one OpenAI-compatible key. Localhost only.</div>
+
+  <div class="warn">⚠️ Violates each provider's ToS. Personal use only. Never bind to a public interface.</div>
+
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:10px">Accounts</div>
+    <div id="providers"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:600">API keys</div>
+      <div style="display:flex;gap:8px">
+        <input id="label" placeholder="label (optional)" />
+        <button onclick="mint()">Mint key</button>
+      </div>
+    </div>
+    <div id="keys"></div>
+    <div style="margin-top:14px;font-size:13px;color:#8a93a0">
+      Endpoint: <code>http://127.0.0.1:8787/v1</code>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROVIDERS = [
+  {id:"claude", name:"Claude (Pro/Max)", ok:true},
+  {id:"chatgpt", name:"ChatGPT (Plus/Pro)", ok:true},
+  {id:"gemini", name:"Gemini (Advanced)", ok:true},
+];
+
+async function refresh() {
+  const s = await fetch("/admin/status").then(r=>r.json());
+  const live = new Set(s.sessions.map(x=>x.provider));
+  document.getElementById("providers").innerHTML = PROVIDERS.map(p => {
+    const on = live.has(p.id);
+    const disabled = !p.ok;
+    return `<div class="row">
+      <div>
+        <span class="dot ${on?'on':'off'}"></span>
+        <span class="name">${p.name}</span>
+        ${p.note ? `<span class="meta"> · ${p.note}</span>` : ''}
+      </div>
+      <div>
+        ${on
+          ? `<button class="ghost" onclick="disconnect('${p.id}')">Disconnect</button>`
+          : `<button onclick="connect('${p.id}')" ${disabled?'disabled':''}>Connect</button>
+             <button class="ghost" onclick="pasteCookie('${p.id}')" title="Paste cookie manually (bypasses captcha)">Paste cookie</button>`}
+      </div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("keys").innerHTML = s.keys.length
+    ? s.keys.map(k => `<div class="keyrow">
+        <code title="${k.key}">${k.key}</code>
+        <button class="ghost" onclick="navigator.clipboard.writeText('${k.key}')">Copy</button>
+        <button class="ghost" onclick="revoke('${k.key}')">Revoke</button>
+      </div>`).join("")
+    : `<div class="meta">No keys yet. Mint one above.</div>`;
+}
+
+async function connect(provider) {
+  const btn = event.target; btn.disabled = true; btn.textContent = "Opening browser…";
+  const r = await fetch("/admin/connect", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({provider})}).then(r=>r.json());
+  if (!r.ok) alert("Connect failed: " + r.error);
+  await refresh();
+}
+async function disconnect(provider) {
+  await fetch("/admin/disconnect", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({provider})});
+  refresh();
+}
+const PASTE_HELP = {
+  claude: "In your normal browser, log into claude.ai (pass the captcha as a human). Then open DevTools (F12) → Application → Cookies → https://claude.ai → copy the VALUE of 'sessionKey'. Paste it (or the whole 'name=value; name=value' cookie string) below.",
+  chatgpt: "Log into chatgpt.com in your normal browser. DevTools → Application → Cookies → https://chatgpt.com → copy '__Secure-next-auth.session-token' value (or the whole cookie string).",
+  gemini: "Log into gemini.google.com in your normal browser. DevTools → Application → Cookies → google.com → copy '__Secure-1PSID' (and ideally '__Secure-1PSIDTS') as a 'name=value; name=value' string.",
+};
+async function pasteCookie(provider) {
+  const cookies = prompt(PASTE_HELP[provider] + "\n\nPaste here:");
+  if (!cookies) return;
+  const r = await fetch("/admin/import", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({provider, cookies})
+  }).then(r=>r.json());
+  if (!r.ok) { alert("Import failed: " + r.error); return; }
+  alert("Imported " + r.cookie_count + " cookie(s) for " + provider + ".");
+  await refresh();
+}
+async function mint() {
+  const label = document.getElementById("label").value;
+  await fetch("/admin/keys", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({label})});
+  document.getElementById("label").value = "";
+  refresh();
+}
+async function revoke(key) {
+  if (!confirm("Revoke this key?")) return;
+  await fetch("/admin/keys/revoke", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({key})});
+  refresh();
+}
+refresh();
+</script>
+</body>
+</html>
