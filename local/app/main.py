@@ -188,6 +188,26 @@ async def v1_messages(req: Request):
     return JSONResponse(data, status_code=status)
 
 
+@app.post("/v1/images/generations")
+async def v1_images(req: Request):
+    """OpenAI-compatible image generation. Routes to ChatGPT's image_generation
+    tool (Gemini support can be added later). Returns b64_json."""
+    _auth(req)
+    body = await req.json()
+    prompt = body.get("prompt", "")
+    if not prompt:
+        raise HTTPException(400, "missing prompt")
+    n = int(body.get("n", 1))
+    from .providers import chatgpt
+    try:
+        images = await chatgpt.generate_image(prompt, n)
+    except Exception as e:
+        raise HTTPException(502, f"image generation error: {e}")
+    if not images:
+        raise HTTPException(502, "no image returned")
+    return {"created": int(time.time()), "data": [{"b64_json": b} for b in images]}
+
+
 class ConnectReq(BaseModel):
     provider: str
 
