@@ -1,3 +1,22 @@
+# ============================================================================
+# PARKED — NOT WIRED INTO ROUTING (2026-05-30)
+# ----------------------------------------------------------------------------
+# This is the legacy cookie-era Gemini provider (gemini.google.com web scrape
+# via curl_cffi). It is preserved for reference only and is NOT imported by
+# providers/__init__.py.
+#
+# Decision rationale: Google has no free OAuth path for Gemini image generation
+# (Pro $20/mo sub only covers image gen inside the gemini.google.com web app;
+# all API/CLI paths bill per image via Vertex or AI Studio). Without image gen
+# parity, Gemini doesn't clear altkey's bar — Claude + ChatGPT already cover
+# chat, vision, tools, AND image gen between them.
+#
+# A working OAuth chat/vision spike via Code Assist exists at
+# local/spikes/gemini_findings.md if you want to revive Gemini later (e.g. if
+# Google adds OAuth image gen, or if you decide to ship a paid-Vertex variant).
+# A partial Code-Assist-OAuth provider was prototyped in this session and lives
+# in git history at commit d28972b's parent tree (search for "gemini_findings").
+# ============================================================================
 import json
 import re
 import uuid

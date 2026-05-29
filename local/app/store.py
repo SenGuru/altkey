@@ -132,7 +132,7 @@ def _ensure_provider_column() -> None:
 
 def mint_key(label: str = "", provider: str | None = None) -> str:
     """Mint an API key. provider=None → all-providers key (model name routes).
-    provider in {claude,chatgpt,gemini} → key only works for that provider."""
+    provider in {claude,chatgpt} → key only works for that provider. (gemini parked)"""
     _ensure_provider_column()
     key = "sk-alt-" + secrets.token_urlsafe(32)
     with _conn() as c:

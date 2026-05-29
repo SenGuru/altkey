@@ -1,4 +1,12 @@
-from . import claude, chatgpt, gemini, claude_oauth
+from . import claude, chatgpt, claude_oauth
+# PARKED: Gemini provider is intentionally disconnected from active routing.
+# Reason: Google walled off image gen from the OAuth/Code Assist path (Pro sub
+# only covers it inside gemini.google.com web app; CLI/API always bills per
+# image via Vertex or AI Studio). Chat + vision DO work via OAuth, but without
+# image gen the provider doesn't hit altkey's parity bar. Spike receipts are
+# in local/spikes/gemini_findings.md and the provider code is preserved in
+# local/app/providers/gemini.py for future revival if Google changes posture.
+# from . import gemini  # noqa: parked
 from .. import store
 
 
@@ -16,7 +24,7 @@ _BY_PREFIX = [
     ("o3", chatgpt),
     ("o4", chatgpt),
     ("chatgpt", chatgpt),
-    ("gemini", gemini),
+    # ("gemini", gemini),  # parked
 ]
 
 
@@ -36,7 +44,8 @@ def list_models() -> list[dict]:
     seen = set()
     claude_mod = _claude_module()
     cache_name = "claude_oauth" if claude_mod is claude_oauth else "claude"
-    plan = [(claude_mod, cache_name), (chatgpt, "chatgpt"), (gemini, "gemini")]
+    plan = [(claude_mod, cache_name), (chatgpt, "chatgpt")]
+    # parked: (gemini, "gemini")
     for mod, name in plan:
         cached = store.load_detected_models(name)
         detected = cached["models"] if cached else []
@@ -49,7 +58,8 @@ def list_models() -> list[dict]:
 
 async def detect_all() -> dict:
     results = {}
-    plan = [("claude", _claude_module()), ("chatgpt", chatgpt), ("gemini", gemini)]
+    plan = [("claude", _claude_module()), ("chatgpt", chatgpt)]
+    # parked: ("gemini", gemini)
     for label, mod in plan:
         sess_name = "claude_oauth" if mod is claude_oauth else label
         if not store.load_session(sess_name):
@@ -62,7 +72,8 @@ async def detect_all() -> dict:
 
 
 async def detect_one(provider: str) -> list[str]:
-    mapping = {"claude": claude, "claude_oauth": claude_oauth, "chatgpt": chatgpt, "gemini": gemini}
+    mapping = {"claude": claude, "claude_oauth": claude_oauth, "chatgpt": chatgpt}
+    # parked: "gemini": gemini
     mod = mapping.get(provider)
     if not mod:
         return []

@@ -238,12 +238,12 @@ async def admin_disconnect(body: ConnectReq):
 _IMPORT_DOMAIN = {
     "claude": ".claude.ai",
     "chatgpt": ".chatgpt.com",
-    "gemini": ".google.com",
+    # "gemini": ".google.com",  # parked
 }
 _IMPORT_REQUIRED = {
     "claude": ["sessionKey"],
     "chatgpt": ["__Secure-next-auth.session-token"],
-    "gemini": ["__Secure-1PSID"],
+    # "gemini": ["__Secure-1PSID"],  # parked
 }
 _DEFAULT_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -347,7 +347,7 @@ async def admin_import(body: ImportReq):
 
 class MintReq(BaseModel):
     label: str = ""
-    provider: str | None = None  # None = all providers; else claude/chatgpt/gemini
+    provider: str | None = None  # None = all providers; else claude/chatgpt (gemini parked)
 
 
 @app.post("/admin/connect-cli", dependencies=[Depends(_check_admin)])
@@ -402,7 +402,7 @@ async def admin_detect():
 @app.post("/admin/keys", dependencies=[Depends(_check_admin)])
 async def admin_mint(body: MintReq):
     prov = body.provider
-    if prov not in (None, "claude", "chatgpt", "gemini"):
+    if prov not in (None, "claude", "chatgpt"):  # "gemini" parked
         return JSONResponse({"ok": False, "error": f"invalid provider scope: {prov}"}, status_code=400)
     return {"key": store.mint_key(body.label, prov), "provider": prov}
 

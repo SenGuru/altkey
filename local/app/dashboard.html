@@ -48,7 +48,7 @@
           <option value="">All providers</option>
           <option value="claude">Claude only</option>
           <option value="chatgpt">ChatGPT only</option>
-          <option value="gemini">Gemini only</option>
+          <!-- <option value="gemini">Gemini only</option> parked -->
         </select>
         <button onclick="mint()">Mint key</button>
       </div>
@@ -64,7 +64,7 @@
 const PROVIDERS = [
   {id:"claude", name:"Claude (Pro/Max)", ok:true},
   {id:"chatgpt", name:"ChatGPT (Plus/Pro)", ok:true},
-  {id:"gemini", name:"Gemini (Advanced)", ok:true},
+  // {id:"gemini", name:"Gemini (Advanced)", ok:true},  // parked
 ];
 
 async function refresh() {
@@ -140,7 +140,7 @@ async function disconnect(provider) {
 const PASTE_HELP = {
   claude: "In your normal browser, log into claude.ai (pass the captcha as a human). Then open DevTools (F12) → Application → Cookies → https://claude.ai → copy the VALUE of 'sessionKey'. Paste it (or the whole 'name=value; name=value' cookie string) below.",
   chatgpt: "Log into chatgpt.com in your normal browser. DevTools → Application → Cookies → https://chatgpt.com → copy '__Secure-next-auth.session-token' value (or the whole cookie string).",
-  gemini: "Log into gemini.google.com in your normal browser. DevTools → Application → Cookies → google.com → copy '__Secure-1PSID' (and ideally '__Secure-1PSIDTS') as a 'name=value; name=value' string.",
+  // gemini: parked
 };
 async function pasteCookie(provider) {
   const cookies = prompt(PASTE_HELP[provider] + "\n\nPaste here:");

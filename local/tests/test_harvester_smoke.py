@@ -2,13 +2,14 @@ from app.harvester import cookie_header, _LOGIN_URLS, _COOKIE_KEYS
 
 
 def test_login_urls_present():
-    assert set(_LOGIN_URLS) == {"claude", "chatgpt", "gemini"}
+    # Gemini parked; harvester itself will be removed in Task 0.5
+    assert {"claude", "chatgpt"} <= set(_LOGIN_URLS)
 
 
 def test_cookie_keys_present():
     assert "sessionKey" in _COOKIE_KEYS["claude"]
     assert "__Secure-next-auth.session-token" in _COOKIE_KEYS["chatgpt"]
-    assert "__Secure-1PSID" in _COOKIE_KEYS["gemini"]
+    # Gemini parked: assert "__Secure-1PSID" in _COOKIE_KEYS["gemini"]
 
 
 def test_cookie_header_basic():

@@ -1,5 +1,7 @@
 from app.providers import for_model, list_models
-from app.providers import claude, chatgpt, gemini, claude_oauth
+from app.providers import claude, chatgpt, claude_oauth
+# Gemini parked — provider preserved at app/providers/gemini.py but disconnected
+# from routing. See providers/__init__.py for the rationale.
 
 
 def test_for_model_routing_claude():
@@ -18,9 +20,10 @@ def test_for_model_routing_chatgpt():
     assert for_model("chatgpt-4o-latest") is chatgpt
 
 
-def test_for_model_routing_gemini():
-    assert for_model("gemini-2.5-pro") is gemini
-    assert for_model("gemini-1.5-pro") is gemini
+def test_for_model_routing_gemini_parked():
+    # Parked: gemini-* model names should NOT route anywhere now.
+    assert for_model("gemini-2.5-pro") is None
+    assert for_model("gemini-1.5-pro") is None
 
 
 def test_for_model_unknown():
@@ -32,7 +35,8 @@ def test_list_models_contains_each_provider():
     ids = [m["id"] for m in list_models()]
     assert any(m.startswith("claude-") for m in ids)
     assert any(m.startswith("gpt-") for m in ids)
-    assert any(m.startswith("gemini-") for m in ids)
+    # gemini parked: list should NOT contain gemini-* entries
+    assert not any(m.startswith("gemini-") for m in ids)
 
 
 def test_claude_flatten_basic():
@@ -125,25 +129,29 @@ def test_chatgpt_resolve_model():
     assert chatgpt._resolve_model("anything-unknown") == "gpt-5.5"
 
 
-def test_gemini_flatten_basic():
-    prompt = gemini._flatten([
-        {"role": "system", "content": "be brief"},
-        {"role": "user", "content": "hi"},
-    ])
-    assert "System: be brief" in prompt
-    assert "User: hi" in prompt
-
-
-def test_gemini_flatten_list_content():
-    prompt = gemini._flatten([
-        {"role": "user", "content": [
-            {"type": "text", "text": "p1 "},
-            {"type": "text", "text": "p2"},
-        ]}
-    ])
-    assert "User: p1 p2" in prompt
-
-
-def test_gemini_model_header_default():
-    assert "gemini-2.5-flash" in gemini._MODEL_HEADER
-    assert gemini._MODEL_HEADER["gemini-2.5-pro"][1] == 1
+# ---------------------------------------------------------------------------
+# Gemini tests PARKED — preserved here for revival if Gemini is ever wired
+# back into routing. See providers/__init__.py for the parking rationale.
+# ---------------------------------------------------------------------------
+# def test_gemini_flatten_basic():
+#     prompt = gemini._flatten([
+#         {"role": "system", "content": "be brief"},
+#         {"role": "user", "content": "hi"},
+#     ])
+#     assert "System: be brief" in prompt
+#     assert "User: hi" in prompt
+#
+#
+# def test_gemini_flatten_list_content():
+#     prompt = gemini._flatten([
+#         {"role": "user", "content": [
+#             {"type": "text", "text": "p1 "},
+#             {"type": "text", "text": "p2"},
+#         ]}
+#     ])
+#     assert "User: p1 p2" in prompt
+#
+#
+# def test_gemini_model_header_default():
+#     assert "gemini-2.5-flash" in gemini._MODEL_HEADER
+#     assert gemini._MODEL_HEADER["gemini-2.5-pro"][1] == 1
