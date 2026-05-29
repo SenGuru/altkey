@@ -82,6 +82,26 @@ async def dashboard() -> str:
     return DASHBOARD
 
 
+@app.get("/oauth/callback", response_class=HTMLResponse)
+async def oauth_callback(code: str = "", state: str = "", error: str = ""):
+    """Claude redirects here after approval — we exchange the code automatically.
+    No pasting needed."""
+    from .providers import claude_oauth
+    if error:
+        return f"<h2>Connect failed</h2><p>{error}</p><p>Close this tab and try again.</p>"
+    if not code:
+        return "<h2>Missing code</h2><p>Close this tab and try again.</p>"
+    try:
+        res = await claude_oauth.finish_oauth(f"{code}#{state}" if state else code)
+        asyncio.create_task(providers.detect_one("claude_oauth"))
+        sub = res.get("subscription", "?")
+        return (f"<h2>✅ Claude connected</h2><p>Subscription: <b>{sub}</b>. Tool calling enabled.</p>"
+                "<p>You can close this tab and return to altkey.</p>"
+                "<script>setTimeout(()=>window.close(),2500)</script>")
+    except Exception as e:
+        return f"<h2>Connect failed</h2><pre>{str(e)[:400]}</pre><p>Close this tab and try again.</p>"
+
+
 @app.get("/v1/models")
 async def v1_models(req: Request) -> dict:
     key = _auth(req)

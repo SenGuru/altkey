@@ -112,12 +112,17 @@ async function connectClaudeOAuth() {
   const r = await fetch("/admin/oauth/start", {method:"POST"}).then(r=>r.json());
   if (!r.url) { alert("Failed to start OAuth"); return; }
   window.open(r.url, "_blank");
-  const code = prompt("A Claude approval page opened in a new tab.\n\nApprove, then copy the code it shows you and paste it here:");
-  if (!code) return;
-  const res = await fetch("/admin/oauth/finish", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code})}).then(r=>r.json());
-  if (!res.ok) { alert("Connect failed: " + res.error); return; }
-  alert("Connected Claude (subscription: " + (res.subscription||"?") + "). Tool calling enabled.");
-  await refresh();
+  // Claude redirects back to /oauth/callback which completes it automatically.
+  // Poll status so the dashboard updates once connected.
+  let tries = 0;
+  const timer = setInterval(async () => {
+    tries++;
+    const s = await fetch("/admin/status").then(r=>r.json());
+    if (s.sessions.some(x => x.provider === "claude_oauth")) {
+      clearInterval(timer); refresh();
+      alert("Claude connected (real API, tool calling).");
+    } else if (tries > 60) { clearInterval(timer); }
+  }, 2000);
 }
 async function disconnect(provider) {
   await fetch("/admin/disconnect", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({provider})});

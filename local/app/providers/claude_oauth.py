@@ -28,11 +28,16 @@ _CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 _ATTEST = "You are Claude Code, Anthropic's official CLI for Claude."
 _BETA = "oauth-2025-04-20"
 
-# OAuth "Connect with Claude" flow (PKCE). The console callback shows the user a
-# code to paste — no CLI, no localhost redirect needed (works for hosted too).
+# OAuth "Connect with Claude" flow (PKCE) — matches Claude Code's real params:
+# loopback redirect (altkey catches it → zero paste) + single user:inference scope.
 _AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
-_REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback"
-_SCOPES = "org:create_api_key user:profile user:inference"
+_SCOPES = "user:inference"
+
+
+def _redirect_uri() -> str:
+    import os as _os
+    port = _os.environ.get("ALTKEY_PORT", "8787")
+    return f"http://localhost:{port}/oauth/callback"
 
 
 def _b64url(data: bytes) -> str:
@@ -54,14 +59,12 @@ def start_oauth() -> dict:
         "code": "true",
         "client_id": _CLIENT_ID,
         "response_type": "code",
-        "redirect_uri": _REDIRECT_URI,
+        "redirect_uri": _redirect_uri(),
         "scope": _SCOPES,
         "code_challenge": challenge,
         "code_challenge_method": "S256",
         "state": state,
     }
-    # quote_via=quote → spaces become %20 (not +); Claude's authorize endpoint
-    # rejects + as "Invalid request format".
     return {"url": f"{_AUTHORIZE_URL}?{urlencode(params, quote_via=quote)}"}
 
 
@@ -78,7 +81,7 @@ async def finish_oauth(code_input: str) -> dict:
         r = await c.post(_TOKEN_API, json={
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": _REDIRECT_URI,
+            "redirect_uri": _redirect_uri(),
             "client_id": _CLIENT_ID,
             "code_verifier": pkce["verifier"],
             "state": state,
