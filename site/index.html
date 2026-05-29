@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>altkey — One key. Your subscriptions, your terms.</title>
+  <meta name="description" content="altkey turns Claude Max + ChatGPT Plus into a single OpenAI-compatible endpoint, running on your laptop. No cookies, no scraping, no API rent." />
+  <meta property="og:title" content="altkey — One key. Your subscriptions, your terms." />
+  <meta property="og:description" content="Turn the AI subscriptions you already pay for into an OpenAI-compatible API key. Local-first, OAuth-only." />
+  <meta property="og:image" content="./assets/glass-key.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      /* Palette — locked to approved variant E. */
+      --cream: #FAF8F4;
+      --cream-tint: #F5EDE3;
+      --peach: #F2D8C2;
+      --navy: #1A1F2E;
+      --navy-soft: #2A3145;
+      --gray: #5A5A55;
+      --gray-soft: #8C8A82;
+      --rule: rgba(26,31,46,0.10);
+      --rule-soft: rgba(26,31,46,0.06);
+      --ochre: #C9943A;
+      --ochre-dim: #B4842F;
+      --ochre-bright: #DDA748;
+      --code-bg: #1A1F2E;
+      --code-text: #E8E5DD;
+
+      --serif: "Fraunces", Georgia, "Times New Roman", serif;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+      /* Spacing scale. */
+      --space-xs: 6px;
+      --space-sm: 12px;
+      --space-md: 24px;
+      --space-lg: 48px;
+      --space-xl: 80px;
+      --space-2xl: 120px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      color: var(--navy);
+      background: var(--cream);
+      background-image: radial-gradient(ellipse 110% 70% at 50% -10%,
+          var(--peach) 0%,
+          color-mix(in srgb, var(--peach) 60%, var(--cream)) 35%,
+          var(--cream) 70%);
+      background-attachment: scroll;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    a { color: inherit; }
+
+    /* ───────────────────── wordmark + nav ───────────────────── */
+    .wordmark {
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+      color: var(--navy);
+      text-align: center;
+      padding: 40px 24px 0;
+    }
+
+    /* ───────────────────── hero ───────────────────── */
+    .hero {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 64px;
+      text-align: center;
+    }
+    h1.headline {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(40px, 6.4vw, 64px);
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+      color: var(--navy);
+      margin: 0 0 24px;
+    }
+    h1.headline .one { font-style: normal; }
+    h1.headline .sub { font-style: italic; font-weight: 400; display: block; margin-top: 4px; }
+    h1.headline em.your {
+      font-style: italic; color: var(--ochre); font-weight: 500;
+    }
+    .lede {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--gray);
+      max-width: 540px;
+      margin: 0 auto 36px;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 20px;
+      border: 1.5px solid var(--ochre);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ochre-dim);
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 14px;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 160ms ease, color 160ms ease, transform 120ms ease;
+    }
+    .cta:hover { background: var(--ochre); color: var(--cream); }
+    .cta:focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; }
+    .cta .arr { font-size: 16px; line-height: 1; transform: translateY(-1px); }
+    .cta.solid {
+      background: var(--navy); color: var(--cream); border-color: var(--navy);
+    }
+    .cta.solid:hover { background: var(--navy-soft); color: var(--cream); }
+    .cta.large { padding: 14px 24px; font-size: 15px; }
+
+    .key {
+      margin: 64px auto 56px;
+      max-width: 560px;
+      position: relative;
+    }
+    .key img {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 28px 24px rgba(40,30,20,0.12))
+              drop-shadow(0 2px 1px rgba(40,30,20,0.06));
+    }
+    .captions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 720px;
+      margin: 0 auto 36px;
+      padding: 0 16px;
+    }
+    .captions p {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--navy);
+      margin: 0;
+      text-align: center;
+    }
+    .captions strong { font-weight: 500; color: var(--navy); }
+    .captions .em-dash { color: var(--gray-soft); margin: 0 4px; }
+
+    /* ───────────────────── shared section atoms ───────────────────── */
+    section.band {
+      padding: var(--space-2xl) 24px;
+    }
+    section.band .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    section.band > .container > header {
+      max-width: 720px;
+      margin: 0 auto var(--space-lg);
+      text-align: center;
+    }
+    .kicker {
+      font-family: var(--mono);
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ochre-dim);
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+    h2.title {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(30px, 4.4vw, 46px);
+      line-height: 1.12;
+      letter-spacing: -0.005em;
+      color: var(--navy);
+      margin: 0 0 16px;
+    }
+    h2.title em { font-style: italic; color: var(--ochre); font-weight: 500; }
+    .deck {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--gray);
+      margin: 0 auto;
+      max-width: 580px;
+    }
+    h3 {
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.005em;
+      margin: 0 0 8px;
+      color: var(--navy);
+    }
+    .rule {
+      height: 1px;
+      background: var(--rule-soft);
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    /* ───────────────────── how it works ───────────────────── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-bottom: var(--space-lg);
+    }
+    .how-step {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .how-num {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 40px;
+      line-height: 1;
+      color: var(--ochre);
+    }
+    .how-step h3 { margin: 0; }
+    .how-step p {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--gray);
+      margin: 0;
+    }
+    .terminal {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 12px;
+      padding: 24px 28px;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.7;
+      box-shadow: 0 20px 40px -20px rgba(26,31,46,0.18);
+      overflow-x: auto;
+    }
+    .terminal .prompt { color: var(--ochre-bright); user-select: none; padding-right: 8px; }
+    .terminal .com    { color: #8C8A82; }
+    .terminal .out    { color: #BDB8AA; }
+    .terminal .ok     { color: #A6D08A; }
+
+    /* ───────────────────── compatibility band ───────────────────── */
+    .compat {
+      padding: var(--space-xl) 24px;
+      border-top: 1px solid var(--rule-soft);
+      border-bottom: 1px solid var(--rule-soft);
+      background: color-mix(in srgb, var(--cream) 92%, var(--peach));
+      text-align: center;
+    }
+    .compat .kicker { margin-bottom: 28px; }
+    .compat-logos {
+      list-style: none;
+      padding: 0; margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 32px 40px;
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--navy-soft);
+      letter-spacing: -0.01em;
+    }
+    .compat-logos li { opacity: 0.85; }
+    .compat-logos li.muted { opacity: 0.45; font-style: italic; }
+
+    /* ───────────────────── live demo / receipt ───────────────────── */
+    .demo-figure {
+      max-width: 880px;
+      margin: 0 auto;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 30px 60px -30px rgba(26,31,46,0.20),
+        0 12px 24px -12px rgba(26,31,46,0.12);
+      background: #fff;
+    }
+    .demo-figure img { display: block; width: 100%; height: auto; }
+    .demo-figcaption {
+      max-width: 760px;
+      margin: 24px auto 0;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--gray-soft);
+      letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── trust ───────────────────── */
+    .trust-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px 56px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .trust-item h3 {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 22px;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .trust-item p {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--gray);
+      margin: 0;
+    }
+
+    /* ───────────────────── pricing ───────────────────── */
+    .tiers {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: var(--space-lg);
+    }
+    .tier {
+      background: color-mix(in srgb, var(--cream) 70%, #fff);
+      border: 1px solid var(--rule-soft);
+      border-radius: 14px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+    .tier:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px -20px rgba(26,31,46,0.12);
+    }
+    .tier.featured {
+      border: 1.5px solid var(--ochre);
+      background: color-mix(in srgb, var(--cream-tint) 60%, #fff);
+    }
+    .tier .badge {
+      position: absolute;
+      top: -12px; right: 20px;
+      background: var(--ochre);
+      color: var(--cream);
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .tier h3 {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: italic;
+      font-size: 22px;
+      color: var(--navy);
+      margin: 0 0 12px;
+    }
+    .tier .price {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 44px;
+      line-height: 1;
+      color: var(--navy);
+      margin: 0 0 4px;
+    }
+    .tier .price .period {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 15px;
+      color: var(--gray);
+      margin-left: 4px;
+    }
+    .tier .desc {
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--gray);
+      margin: 8px 0 20px;
+      line-height: 1.5;
+    }
+    .tier ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .tier ul li {
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--navy-soft);
+      line-height: 1.5;
+      padding-left: 22px;
+      position: relative;
+    }
+    .tier ul li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--ochre);
+      font-weight: 500;
+    }
+    .tier .cta { align-self: flex-start; }
+
+    /* ───────────────────── FAQ ───────────────────── */
+    .faq-list {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .faq-list details {
+      border-bottom: 1px solid var(--rule-soft);
+      padding: 20px 0;
+    }
+    .faq-list details:first-child { border-top: 1px solid var(--rule-soft); }
+    .faq-list summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--navy);
+      line-height: 1.4;
+      padding: 4px 0;
+    }
+    .faq-list summary::-webkit-details-marker { display: none; }
+    .faq-list summary::after {
+      content: "+";
+      font-family: var(--sans);
+      font-weight: 300;
+      font-size: 24px;
+      color: var(--ochre);
+      line-height: 1;
+      transition: transform 200ms ease;
+    }
+    .faq-list details[open] summary::after { content: "−"; }
+    .faq-list details p {
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--gray);
+      margin: 12px 0 4px;
+      max-width: 640px;
+    }
+
+    /* ───────────────────── footer ───────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--rule-soft);
+      padding: 64px 24px 48px;
+      background: color-mix(in srgb, var(--cream) 70%, transparent);
+    }
+    .footer-grid {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 40px;
+      align-items: flex-start;
+    }
+    .footer-wordmark {
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+      color: var(--navy);
+      margin: 0 0 8px;
+    }
+    .footer-tagline {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gray-soft);
+      margin: 0;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+    .footer-col h4 {
+      font-family: var(--mono);
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ochre-dim);
+      margin: 0 0 12px;
+    }
+    .footer-col ul {
+      list-style: none;
+      padding: 0; margin: 0;
+      display: flex; flex-direction: column;
+      gap: 8px;
+    }
+    .footer-col a {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 14px;
+      color: var(--navy-soft);
+      text-decoration: none;
+    }
+    .footer-col a:hover { color: var(--ochre-dim); }
+    .footer-install {
+      max-width: 980px;
+      margin: 56px auto 0;
+      padding-top: 32px;
+      border-top: 1px solid var(--rule-soft);
+      text-align: center;
+    }
+    .footer-install code {
+      font-family: var(--mono);
+      font-size: 13px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    .footer-install code .com { color: var(--ochre-bright); user-select: none; padding-right: 8px; }
+    .footer-meta {
+      max-width: 980px;
+      margin: 24px auto 0;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gray-soft);
+      letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── dark mode ───────────────────── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --cream: #14171F;
+        --cream-tint: #1B1F2A;
+        --peach: rgba(242,216,194,0.08);
+        --navy: #F4EFE3;
+        --navy-soft: #D8D2C2;
+        --gray: #BDB8AA;
+        --gray-soft: #8B8676;
+        --rule: rgba(244,239,227,0.10);
+        --rule-soft: rgba(244,239,227,0.07);
+        --code-bg: #0B0D12;
+        --code-text: #E8E5DD;
+      }
+      body { background: #14171F; }
+      body { background-image: radial-gradient(ellipse 110% 70% at 50% -10%, rgba(242,216,194,0.08) 0%, transparent 60%); }
+      .key img { filter: none; }
+      .tier { background: color-mix(in srgb, var(--cream) 60%, #000); }
+      .tier.featured { background: color-mix(in srgb, var(--cream-tint) 60%, #000); }
+      .compat { background: color-mix(in srgb, var(--cream) 80%, #000); }
+    }
+
+    /* ───────────────────── reduced motion ───────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+
+    /* ───────────────────── narrow viewport polish ───────────────────── */
+    @media (max-width: 880px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 680px) {
+      :root { --space-2xl: 80px; --space-xl: 56px; --space-lg: 36px; }
+      .how-grid, .tiers, .trust-grid, .captions { grid-template-columns: 1fr; }
+      .trust-grid { gap: 28px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+      .hero { padding-top: 36px; padding-bottom: 32px; }
+      .key { margin: 40px auto 32px; }
+      .terminal { font-size: 12.5px; padding: 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="wordmark">altkey</div>
+  </header>
+
+  <main>
+
+    <!-- ─────────── 1. Hero ─────────── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <h1 id="hero-heading" class="headline" data-pretext>
+        <span class="one">One key.</span>
+        <span class="sub">Your subscriptions, <em class="your">your</em> terms.</span>
+      </h1>
+      <p class="lede" data-pretext>
+        altkey turns Claude Max + ChatGPT Plus into a single OpenAI-compatible
+        endpoint, running on your laptop.
+      </p>
+      <a class="cta" href="#install" aria-label="Try the local install">
+        <span>Try the local install</span>
+        <span class="arr" aria-hidden="true">→</span>
+      </a>
+
+      <figure class="key" id="key">
+        <img
+          src="./assets/glass-key.png"
+          alt="A photorealistic translucent glass key, the altkey product mark."
+          width="1536" height="1024"
+        />
+      </figure>
+
+      <div class="captions" aria-label="What you can do per provider">
+        <p><strong>Chat, vision, tools.</strong> <span class="em-dash">—</span> Claude</p>
+        <p><strong>Plus images.</strong> <span class="em-dash">—</span> ChatGPT</p>
+        <p><strong>Drops into any OpenAI tool.</strong></p>
+      </div>
+    </section>
+
+    <!-- ─────────── 2. How it works ─────────── -->
+    <section class="band" id="how" aria-labelledby="how-heading">
+      <div class="container">
+        <header>
+          <span class="kicker">How it works</span>
+          <h2 id="how-heading" class="title">Three commands. Two subscriptions you <em>already pay for</em>.</h2>
+          <p class="deck">altkey runs on <strong>your</strong> machine and speaks OpenAI's API on the front, your AI subscription's OAuth on the back. Nothing leaves your laptop except the model calls themselves.</p>
+        </header>
+
+        <div class="how-grid">
+          <div class="how-step">
+            <span class="how-num">01</span>
+            <h3>Install altkey</h3>
+            <p>One static binary. macOS, Linux, Windows. No Python, no Node, no Docker.</p>
+          </div>
+          <div class="how-step">
+            <span class="how-num">02</span>
+            <h3>Connect your subs</h3>
+            <p>One click each for Claude Max and ChatGPT Plus. Real OAuth, not cookies. Tokens stay on disk.</p>
+          </div>
+          <div class="how-step">
+            <span class="how-num">03</span>
+            <h3>Point your tools at it</h3>
+            <p>Set <code style="font-family:var(--mono);font-size:13px">OPENAI_BASE_URL</code> and altkey serves the rest. Cursor, Aider, Cline, anything.</p>
+          </div>
+        </div>
+
+        <pre class="terminal" aria-label="example shell session"><code><span class="prompt">$</span> <span class="com">altkey serve</span>
+<span class="out">altkey engine listening on http://127.0.0.1:8787 <span class="ok">✓</span></span>
+
+<span class="prompt">$</span> <span class="com">export OPENAI_API_KEY=sk-alt-...</span>
+<span class="prompt">$</span> <span class="com">export OPENAI_BASE_URL=http://127.0.0.1:8787</span>
+
+<span class="prompt">$</span> <span class="com">aider --4o</span>
+<span class="out">Connected. Using gpt-4o → routed through ChatGPT Plus.  <span class="ok">$0 burned.</span></span></code></pre>
+      </div>
+    </section>
+
+    <!-- ─────────── 3. Compatibility band ─────────── -->
+    <section class="compat" aria-labelledby="compat-heading">
+      <span class="kicker" id="compat-heading">Works with anything that respects OPENAI_API_KEY</span>
+      <ul class="compat-logos">
+        <li>Claude Code</li>
+        <li>Cursor</li>
+        <li>Aider</li>
+        <li>Cline</li>
+        <li>Continue</li>
+        <li>gstack</li>
+        <li>OpenAI Agents SDK</li>
+        <li>LangChain</li>
+        <li class="muted">your tool too</li>
+      </ul>
+    </section>
+
+    <!-- ─────────── 4. Live demo / receipt ─────────── -->
+    <section class="band" id="receipt" aria-labelledby="receipt-heading">
+      <div class="container">
+        <header>
+          <span class="kicker">Tested in production</span>
+          <h2 id="receipt-heading" class="title">We made this landing page <em>through altkey</em>.</h2>
+          <p class="deck">gstack's design-shotgun fired five mockups in parallel at <code style="font-family:var(--mono);font-size:14px">/v1/responses</code>, image_generation tool, ChatGPT Plus sub. Wall time: 49 seconds. OpenAI billing: $0. The variant on the right is what you scrolled past at the top.</p>
+        </header>
+        <figure class="demo-figure">
+          <img
+            src="./assets/flowstate-receipt.png"
+            alt="Screenshot of a landing page mockup altkey generated through gstack's design-shotgun."
+            loading="lazy"
+            width="1296" height="864"
+          />
+        </figure>
+        <p class="demo-figcaption">Real receipt. resp_07ad43f… via codex_cli_rs. Generated 2026-05-30.</p>
+      </div>
+    </section>
+
+    <!-- ─────────── 5. Trust ─────────── -->
+    <section class="band" id="trust" aria-labelledby="trust-heading">
+      <div class="container">
+        <header>
+          <span class="kicker">What it doesn't do</span>
+          <h2 id="trust-heading" class="title">Your subscriptions stay <em>yours</em>.</h2>
+          <p class="deck">altkey is software. Not a service. It runs on your laptop, reads the credential files your CLIs already wrote, and never sends them anywhere.</p>
+        </header>
+        <div class="trust-grid">
+          <div class="trust-item">
+            <h3>Never proxies your tokens.</h3>
+            <p>OAuth lives in <code style="font-family:var(--mono);font-size:13px">~/.codex/auth.json</code> and <code style="font-family:var(--mono);font-size:13px">~/.claude/.credentials.json</code>, where they already were. altkey reads them in-process. They don't leave your machine.</p>
+          </div>
+          <div class="trust-item">
+            <h3>Never reads your history.</h3>
+            <p>altkey speaks the model APIs. Your provider's chat history, settings, and account data live in the provider's web UI. altkey can't see them. Doesn't want to.</p>
+          </div>
+          <div class="trust-item">
+            <h3>Never phones home.</h3>
+            <p>The free CLI is bound to 127.0.0.1. Zero telemetry. Zero analytics. Zero outbound traffic that isn't a model call you asked for.</p>
+          </div>
+          <div class="trust-item">
+            <h3>Open source.</h3>
+            <p>Single Rust binary. Read the code. Build it yourself. Audit the OAuth refresh code in <code style="font-family:var(--mono);font-size:13px">providers/</code> in under an hour.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── 6. Pricing ─────────── -->
+    <section class="band" id="pricing" aria-labelledby="pricing-heading">
+      <div class="container">
+        <header>
+          <span class="kicker">Pricing</span>
+          <h2 id="pricing-heading" class="title">Free where it can be. <em>Honest</em> where it can't.</h2>
+          <p class="deck">altkey is open source and free forever on your machine. Cloud and Pro add the things you actually need a server for: sync, dashboards, paid adapters.</p>
+        </header>
+
+        <div class="tiers">
+          <article class="tier">
+            <h3>Free CLI</h3>
+            <p class="price">$0</p>
+            <p class="desc">The binary on your laptop. Bring your own subscriptions.</p>
+            <ul>
+              <li>Claude OAuth + ChatGPT Codex OAuth</li>
+              <li><code style="font-family:var(--mono);font-size:13px">/v1/chat/completions</code> + <code style="font-family:var(--mono);font-size:13px">/v1/responses</code> + image generation</li>
+              <li>Drop-in for any OpenAI-compatible tool</li>
+              <li>Open source (MIT)</li>
+            </ul>
+            <a class="cta" href="#install">Install <span class="arr" aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="tier featured">
+            <span class="badge">Most popular</span>
+            <h3>altkey Cloud</h3>
+            <p class="price">$5<span class="period">/month</span></p>
+            <p class="desc">For people who use altkey on more than one machine.</p>
+            <ul>
+              <li>Everything in Free</li>
+              <li>Sync provider connections across machines</li>
+              <li>Hosted dashboard at altkey.dev</li>
+              <li>Usage analytics per tool</li>
+              <li>Priority bug fixes</li>
+            </ul>
+            <a class="cta solid" href="#start-cloud">Start Cloud <span class="arr" aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="tier">
+            <h3>altkey Pro</h3>
+            <p class="price">$25<span class="period">/month</span></p>
+            <p class="desc">For people doing the building.</p>
+            <ul>
+              <li>Everything in Cloud</li>
+              <li><strong>Pre-patched adapters</strong> — gstack, Cursor, Aider, more</li>
+              <li>Team workspaces (up to 5 seats)</li>
+              <li>Priority adapter requests</li>
+              <li>Early access to new providers</li>
+            </ul>
+            <a class="cta" href="#start-pro">Start Pro <span class="arr" aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── 7. FAQ ─────────── -->
+    <section class="band" id="faq" aria-labelledby="faq-heading">
+      <div class="container">
+        <header>
+          <span class="kicker">Questions you should be asking</span>
+          <h2 id="faq-heading" class="title">Asked, <em>answered honestly</em>.</h2>
+        </header>
+        <div class="faq-list">
+          <details>
+            <summary>Is this against ChatGPT's or Anthropic's terms of service?</summary>
+            <p>Personal use of your own subscription through an OAuth flow is the same posture as the official Codex CLI and Claude Code — both of which hit the exact endpoints altkey hits. We don't pool subscriptions, we don't relay your sub to anyone else, and we never proxy your tokens. As long as it's you, on your machine, for your work, you're inside both the spirit and the letter of the agreements.</p>
+          </details>
+          <details>
+            <summary>Can my account get banned for using this?</summary>
+            <p>Highly unlikely for personal-volume use. If you proxy altkey out to the public internet and serve other people's requests with your sub, yes that can get your account banned (and you'd be re-selling). Don't do that. Use it for your own work on your own machine and you're fine.</p>
+          </details>
+          <details>
+            <summary>Does it work with Claude Code itself?</summary>
+            <p>Yes. Point <code style="font-family:var(--mono);font-size:13px">ANTHROPIC_BASE_URL</code> at altkey and Claude Code keeps working — the native <code style="font-family:var(--mono);font-size:13px">/v1/messages</code> endpoint is a full passthrough with the attestation header injected.</p>
+          </details>
+          <details>
+            <summary>What about Gemini, Llama, Mistral?</summary>
+            <p>Not yet, by choice. Google has no free OAuth image-gen path (Pro covers it only inside the gemini.google.com web app; CLI/API/Vertex all bill per image). We'll add Gemini when we can do it without rebuilding the cookie-scraping machinery we deliberately killed. Llama / Mistral show up when there's a clean personal-hosting story.</p>
+          </details>
+          <details>
+            <summary>What's the difference between Free, Cloud, and Pro?</summary>
+            <p>Free is the binary — runs on your laptop, hits your subs, end of story. Cloud adds the multi-machine + dashboard pieces that need a hosted account. Pro adds the things we ship as a product on top of altkey itself: pre-patched adapters for tools that don't respect <code style="font-family:var(--mono);font-size:13px">OPENAI_BASE_URL</code>, team workspaces, and priority requests.</p>
+          </details>
+          <details>
+            <summary>Where does the name come from?</summary>
+            <p>"alt-key" — the alternative key to the door you've already paid the rent for. Also alt + key as in option + key on your keyboard. We liked both.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ─────────── 8. Footer ─────────── -->
+  <footer class="site-footer" id="install">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <p class="footer-wordmark">altkey</p>
+        <p class="footer-tagline">A local utility from independent developers. Open source, MIT licensed.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="/changelog">Changelog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Build</h4>
+        <ul>
+          <li><a href="https://github.com/SenGuru/altkey">GitHub</a></li>
+          <li><a href="/docs">Docs</a></li>
+          <li><a href="/adapters">Adapters</a></li>
+          <li><a href="https://twitter.com/senguru">@senguru</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-install">
+      <code><span class="com">$</span>brew install altkey</code>
+    </p>
+    <p class="footer-meta">
+      © 2026 altkey. No cookies, no scraping, no tracking, no SaaS resale. Your subs are yours.
+    </p>
+  </footer>
+
+  <script type="module">
+    // Pretext: prepare-once, layout-on-resize. Used only on the hero headline
+    // and lede because those are the type-critical elements; everything below
+    // is normal-flow content where browser layout is correct enough.
+    import { prepare, layout } from "./pretext.js";
+
+    const els = Array.from(document.querySelectorAll("[data-pretext]"));
+    const prepared = new Map();
+
+    function fontFor(el) {
+      const cs = getComputedStyle(el);
+      return `${cs.fontStyle || "normal"} ${cs.fontWeight || "400"} ${cs.fontSize || "16px"} ${cs.fontFamily || "serif"}`;
+    }
+    function lineHeightPx(el) {
+      const lh = getComputedStyle(el).lineHeight;
+      if (lh === "normal") return parseFloat(getComputedStyle(el).fontSize) * 1.2;
+      return parseFloat(lh);
+    }
+
+    async function init() {
+      try { await document.fonts.ready; } catch {}
+      for (const el of els) {
+        prepared.set(el, prepare(el.textContent, fontFor(el)));
+      }
+      relayout();
+    }
+    function relayout() {
+      for (const [el, handle] of prepared) {
+        try {
+          const { height } = layout(handle, el.clientWidth, lineHeightPx(el));
+          el.style.minHeight = `${Math.round(height)}px`;
+        } catch {}
+      }
+    }
+    new ResizeObserver(() => relayout()).observe(document.body);
+    init();
+  </script>
+</body>
+</html>
