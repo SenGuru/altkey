@@ -1,21 +1,11 @@
-from . import claude, chatgpt, claude_oauth
+from . import chatgpt, claude_oauth
 # PARKED: Gemini provider is intentionally disconnected from active routing.
-# Reason: Google walled off image gen from the OAuth/Code Assist path (Pro sub
-# only covers it inside gemini.google.com web app; CLI/API always bills per
-# image via Vertex or AI Studio). Chat + vision DO work via OAuth, but without
-# image gen the provider doesn't hit altkey's parity bar. Spike receipts are
-# in local/spikes/gemini_findings.md and the provider code is preserved in
-# local/app/providers/gemini.py for future revival if Google changes posture.
+# See local/spikes/gemini_findings.md — chat+vision via OAuth works, but Google
+# walled off image gen from the OAuth path (Pro sub only covers gemini.google.com
+# web app; API/CLI/Vertex all bill per image). Without parity, parked.
+# Receipt code preserved at local/app/providers/gemini.py.
 # from . import gemini  # noqa: parked
 from .. import store
-
-
-def _claude_module():
-    """Prefer the OAuth (real-API) Claude path when a CLI token is connected;
-    fall back to the chat-backend relay otherwise."""
-    if store.load_session("claude_oauth"):
-        return claude_oauth
-    return claude
 
 
 _BY_PREFIX = [
@@ -31,7 +21,7 @@ _BY_PREFIX = [
 def for_model(model: str):
     m = model.lower()
     if m.startswith("claude"):
-        return _claude_module()
+        return claude_oauth
     for prefix, mod in _BY_PREFIX:
         if m.startswith(prefix):
             return mod
@@ -42,15 +32,13 @@ def list_models() -> list[dict]:
     """Prefer each provider's live-detected models; fall back to static."""
     out = []
     seen = set()
-    claude_mod = _claude_module()
-    cache_name = "claude_oauth" if claude_mod is claude_oauth else "claude"
-    plan = [(claude_mod, cache_name), (chatgpt, "chatgpt")]
+    plan = [(claude_oauth, "claude_oauth"), (chatgpt, "chatgpt")]
     # parked: (gemini, "gemini")
     for mod, name in plan:
         cached = store.load_detected_models(name)
         detected = cached["models"] if cached else []
         for mid in [*detected, *mod.MODELS]:
-            if mid and ("claude", mid) not in seen and (mod.NAME, mid) not in seen:
+            if mid and (mod.NAME, mid) not in seen:
                 seen.add((mod.NAME, mid))
                 out.append({"id": mid, "object": "model", "owned_by": mod.NAME})
     return out
@@ -58,10 +46,9 @@ def list_models() -> list[dict]:
 
 async def detect_all() -> dict:
     results = {}
-    plan = [("claude", _claude_module()), ("chatgpt", chatgpt)]
-    # parked: ("gemini", gemini)
-    for label, mod in plan:
-        sess_name = "claude_oauth" if mod is claude_oauth else label
+    plan = [("claude", claude_oauth, "claude_oauth"), ("chatgpt", chatgpt, "chatgpt")]
+    # parked: ("gemini", gemini, "gemini")
+    for label, mod, sess_name in plan:
         if not store.load_session(sess_name):
             continue
         try:
@@ -72,7 +59,7 @@ async def detect_all() -> dict:
 
 
 async def detect_one(provider: str) -> list[str]:
-    mapping = {"claude": claude, "claude_oauth": claude_oauth, "chatgpt": chatgpt}
+    mapping = {"claude_oauth": claude_oauth, "chatgpt": chatgpt}
     # parked: "gemini": gemini
     mod = mapping.get(provider)
     if not mod:

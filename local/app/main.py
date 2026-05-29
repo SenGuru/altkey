@@ -11,14 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from . import providers, store
-from .harvester import harvest
-from .providers.claude import openai_chunk
 
 store.init()
 
 # When ALTKEY_ADMIN_TOKEN is set (any non-local/hosted deployment), every
 # /admin/* call must present it as `X-Admin-Token`. Unset = local mode, open
-# (the server is bound to 127.0.0.1 and the companion extension talks to it).
+# (the server is bound to 127.0.0.1).
 _ADMIN_TOKEN = os.environ.get("ALTKEY_ADMIN_TOKEN", "")
 
 
@@ -41,11 +39,10 @@ async def _startup():
         print("[altkey] seeded claude_oauth token from ALTKEY_CLAUDE_OAUTH_JSON")
     asyncio.create_task(claude_oauth.refresh_loop())
 
-# Allow the companion browser extension (chrome-extension:// / moz-extension://)
-# to call the admin capture endpoint. Server is bound to 127.0.0.1 only.
+# CORS for the local dashboard. Server is bound to 127.0.0.1 only.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^(chrome-extension|moz-extension)://.*$",
+    allow_origin_regex=r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -125,48 +122,16 @@ async def v1_chat(req: Request):
         raise HTTPException(403, f"this key is scoped to '{scope}' and cannot use model '{model}' ({mod.NAME})")
     want_stream = bool(body.get("stream"))
 
-    # NATIVE providers (OAuth → real API) handle the full OpenAI surface
-    # themselves, including tool calls, and emit OpenAI-formatted output.
-    if getattr(mod, "NATIVE", False):
-        if want_stream:
-            return StreamingResponse(mod.openai_stream(body), media_type="text/event-stream")
-        try:
-            return await mod.openai_completion(body)
-        except Exception as e:
-            raise HTTPException(502, f"upstream error: {e}")
-
+    # All live providers are NATIVE (OAuth → real API), handling the full
+    # OpenAI surface (tool calls, vision) and emitting OpenAI-formatted output.
+    if not getattr(mod, "NATIVE", False):
+        raise HTTPException(500, f"provider {mod.NAME} is not wired for native OpenAI output")
     if want_stream:
-        async def gen():
-            try:
-                async for evt in mod.stream(body):
-                    yield "data: " + json.dumps(openai_chunk(model, evt.get("delta", ""))) + "\n\n"
-                yield "data: " + json.dumps(openai_chunk(model, "", finish="stop")) + "\n\n"
-                yield "data: [DONE]\n\n"
-            except Exception as e:
-                err = {"error": {"message": str(e), "type": "upstream_error"}}
-                yield "data: " + json.dumps(err) + "\n\n"
-                yield "data: [DONE]\n\n"
-        return StreamingResponse(gen(), media_type="text/event-stream")
-
-    text_parts: list[str] = []
+        return StreamingResponse(mod.openai_stream(body), media_type="text/event-stream")
     try:
-        async for evt in mod.stream(body):
-            text_parts.append(evt.get("delta", ""))
+        return await mod.openai_completion(body)
     except Exception as e:
         raise HTTPException(502, f"upstream error: {e}")
-    content = "".join(text_parts)
-    return {
-        "id": f"chatcmpl-{uuid.uuid4().hex[:24]}",
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": model,
-        "choices": [{
-            "index": 0,
-            "message": {"role": "assistant", "content": content},
-            "finish_reason": "stop",
-        }],
-        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-    }
 
 
 @app.post("/v1/messages")
@@ -220,129 +185,10 @@ async def admin_status():
     }
 
 
-@app.post("/admin/connect", dependencies=[Depends(_check_admin)])
-async def admin_connect(body: ConnectReq):
-    try:
-        res = await harvest(body.provider)
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
-    return {"ok": True, **res}
-
-
 @app.post("/admin/disconnect", dependencies=[Depends(_check_admin)])
 async def admin_disconnect(body: ConnectReq):
     store.delete_session(body.provider)
     return {"ok": True}
-
-
-_IMPORT_DOMAIN = {
-    "claude": ".claude.ai",
-    "chatgpt": ".chatgpt.com",
-    # "gemini": ".google.com",  # parked
-}
-_IMPORT_REQUIRED = {
-    "claude": ["sessionKey"],
-    "chatgpt": ["__Secure-next-auth.session-token"],
-    # "gemini": ["__Secure-1PSID"],  # parked
-}
-_DEFAULT_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-)
-
-
-class ImportReq(BaseModel):
-    provider: str
-    cookies: str
-    user_agent: str = ""
-
-
-def _parse_cookie_string(s: str) -> list[tuple[str, str]]:
-    out = []
-    for part in s.replace("\n", ";").split(";"):
-        part = part.strip()
-        if not part or "=" not in part:
-            continue
-        name, _, value = part.partition("=")
-        name = name.strip()
-        value = value.strip()
-        if name:
-            out.append((name, value))
-    return out
-
-
-class CaptureCookie(BaseModel):
-    name: str
-    value: str
-    domain: str = ""
-    path: str = "/"
-    secure: bool = True
-
-
-class CaptureReq(BaseModel):
-    provider: str
-    cookies: list[CaptureCookie]
-    user_agent: str = ""
-
-
-@app.post("/admin/capture", dependencies=[Depends(_check_admin)])
-async def admin_capture(body: CaptureReq):
-    """Companion-extension entrypoint. Receives structured cookies read via the
-    browser's chrome.cookies API after an explicit user 'Connect' click."""
-    if body.provider not in _IMPORT_DOMAIN:
-        return JSONResponse({"ok": False, "error": f"unknown provider: {body.provider}"}, status_code=400)
-    names = [c.name for c in body.cookies]
-    missing = [
-        p for p in _IMPORT_REQUIRED[body.provider]
-        if not any(n.startswith(p) for n in names)
-    ]
-    if missing:
-        return JSONResponse(
-            {"ok": False, "error": f"not logged in — missing: {', '.join(missing)}"},
-            status_code=400,
-        )
-    cookies = [
-        {
-            "name": c.name,
-            "value": c.value,
-            "domain": c.domain or _IMPORT_DOMAIN[body.provider],
-            "path": c.path or "/",
-            "secure": c.secure,
-        }
-        for c in body.cookies
-    ]
-    store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
-    asyncio.create_task(providers.detect_one(body.provider))
-    return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
-
-
-@app.post("/admin/import", dependencies=[Depends(_check_admin)])
-async def admin_import(body: ImportReq):
-    if body.provider not in _IMPORT_DOMAIN:
-        return JSONResponse({"ok": False, "error": f"unknown provider: {body.provider}"}, status_code=400)
-    pairs = _parse_cookie_string(body.cookies)
-    if not pairs:
-        return JSONResponse({"ok": False, "error": "no cookies parsed — paste name=value pairs"}, status_code=400)
-
-    names = [name for name, _ in pairs]
-    missing = [
-        c for c in _IMPORT_REQUIRED[body.provider]
-        if not any(n.startswith(c) for n in names)
-    ]
-    if missing:
-        return JSONResponse(
-            {"ok": False, "error": f"missing required cookie(s): {', '.join(missing)}"},
-            status_code=400,
-        )
-
-    domain = _IMPORT_DOMAIN[body.provider]
-    cookies = [
-        {"name": name, "value": value, "domain": domain, "path": "/", "secure": True}
-        for name, value in pairs
-    ]
-    store.save_session(body.provider, {"cookies": cookies, "user_agent": body.user_agent or _DEFAULT_UA})
-    asyncio.create_task(providers.detect_one(body.provider))
-    return {"ok": True, "provider": body.provider, "cookie_count": len(cookies)}
 
 
 class MintReq(BaseModel):
@@ -352,25 +198,46 @@ class MintReq(BaseModel):
 
 @app.post("/admin/connect-cli", dependencies=[Depends(_check_admin)])
 async def admin_connect_cli(body: ConnectReq):
-    """Connect Claude via the local Claude Code OAuth token (real Anthropic API,
-    enables tool calling). Reads ~/.claude/.credentials.json."""
-    if body.provider != "claude":
-        return JSONResponse({"ok": False, "error": "only claude CLI supported here"}, status_code=400)
-    path = Path.home() / ".claude" / ".credentials.json"
-    if not path.exists():
-        return JSONResponse({"ok": False, "error": "no Claude Code credentials found — log into Claude Code first"}, status_code=400)
-    try:
-        oauth = json.loads(path.read_text())["claudeAiOauth"]
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": f"could not read credentials: {e}"}, status_code=400)
-    store.save_session("claude_oauth", {
-        "accessToken": oauth["accessToken"],
-        "refreshToken": oauth.get("refreshToken", ""),
-        "expiresAt": oauth.get("expiresAt", 0),
-        "subscriptionType": oauth.get("subscriptionType", "unknown"),
-    })
-    asyncio.create_task(providers.detect_one("claude_oauth"))
-    return {"ok": True, "provider": "claude", "mode": "oauth", "subscription": oauth.get("subscriptionType")}
+    """Connect a provider by reading its CLI's OAuth credentials from disk.
+    - claude  → ~/.claude/.credentials.json (Claude Code login)
+    - chatgpt → ~/.codex/auth.json (OpenAI Codex CLI login)
+    Both are real-API OAuth tokens; no cookies, no impersonation."""
+    if body.provider == "claude":
+        path = Path.home() / ".claude" / ".credentials.json"
+        if not path.exists():
+            return JSONResponse({"ok": False, "error": "no Claude Code credentials found — log into Claude Code first"}, status_code=400)
+        try:
+            oauth = json.loads(path.read_text())["claudeAiOauth"]
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"could not read credentials: {e}"}, status_code=400)
+        store.save_session("claude_oauth", {
+            "accessToken": oauth["accessToken"],
+            "refreshToken": oauth.get("refreshToken", ""),
+            "expiresAt": oauth.get("expiresAt", 0),
+            "subscriptionType": oauth.get("subscriptionType", "unknown"),
+        })
+        asyncio.create_task(providers.detect_one("claude_oauth"))
+        return {"ok": True, "provider": "claude", "mode": "oauth", "subscription": oauth.get("subscriptionType")}
+
+    if body.provider == "chatgpt":
+        path = Path.home() / ".codex" / "auth.json"
+        if not path.exists():
+            return JSONResponse({"ok": False, "error": "no Codex CLI credentials found — run `codex` and log in first"}, status_code=400)
+        try:
+            d = json.loads(path.read_text())
+            tokens = d.get("tokens") or {}
+            if not tokens.get("access_token"):
+                raise ValueError("auth.json has no tokens.access_token")
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"could not read credentials: {e}"}, status_code=400)
+        store.save_session("chatgpt", {
+            "source": "codex_cli",
+            "account_id": tokens.get("account_id", ""),
+        })
+        asyncio.create_task(providers.detect_one("chatgpt"))
+        return {"ok": True, "provider": "chatgpt", "mode": "oauth", "account_id": tokens.get("account_id", "")}
+
+    return JSONResponse({"ok": False, "error": f"unsupported provider: {body.provider}"}, status_code=400)
 
 
 @app.post("/admin/oauth/start", dependencies=[Depends(_check_admin)])
