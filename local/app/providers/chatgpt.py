@@ -278,6 +278,105 @@ async def detect(session: dict) -> list[str]:
     return MODELS
 
 
+# ---- Responses API proxy (used by /v1/responses) -------------------------
+#
+# The Codex backend IS the OpenAI Responses API. We forward the caller's body
+# almost verbatim (with model rewrite + forced stream:true since Codex demands
+# it) and accumulate the SSE into a non-streaming response shaped like
+# api.openai.com would return — output array with message + image_generation_call
+# items, response id, usage. This is what tools like gstack/design-shotgun expect.
+
+async def proxy_responses(body: dict) -> dict:
+    token, acct = await _token()
+    model = _resolve_model(body.get("model") or _DEFAULT)
+    forward = {**body, "model": model, "stream": True}
+    forward.setdefault("store", False)
+    # Codex backend requires non-empty instructions and array-shaped input.
+    # OpenAI's public Responses API accepts a bare string for `input`; normalize.
+    if not forward.get("instructions"):
+        forward["instructions"] = "You are a helpful assistant."
+    inp = forward.get("input")
+    if isinstance(inp, str):
+        forward["input"] = [{"type": "message", "role": "user",
+                             "content": [{"type": "input_text", "text": inp}]}]
+
+    text = ""
+    tools_by_idx: dict[int, dict] = {}
+    idx = -1
+    image_items: list[dict] = []          # one per image_generation_call
+    usage: dict = {}
+    response_id = ""
+    response_obj: dict = {}
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300, read=600)) as c:
+        async with c.stream("POST", _RESPONSES, headers=_headers(token, acct), json=forward) as r:
+            if r.status_code >= 400:
+                raise RuntimeError(f"chatgpt {r.status_code}: {(await r.aread())[:400].decode('utf-8','ignore')}")
+            async for line in r.aiter_lines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    ev = json.loads(line[5:])
+                except json.JSONDecodeError:
+                    continue
+                et = ev.get("type", "")
+                if et == "response.created":
+                    response_id = (ev.get("response") or {}).get("id", "") or response_id
+                elif et == "response.output_text.delta":
+                    text += ev.get("delta", "")
+                elif et == "response.output_item.added":
+                    it = ev.get("item") or {}
+                    if it.get("type") == "function_call":
+                        idx += 1
+                        tools_by_idx[idx] = {"id": it.get("call_id", ""), "name": it.get("name", ""), "args": ""}
+                    elif it.get("type") == "image_generation_call":
+                        image_items.append({"type": "image_generation_call",
+                                            "id": it.get("id", ""), "status": "in_progress", "result": None})
+                elif et == "response.function_call_arguments.delta":
+                    if idx in tools_by_idx:
+                        tools_by_idx[idx]["args"] += ev.get("delta", "")
+                elif et == "response.image_generation_call.partial_image":
+                    b = ev.get("partial_image_b64")
+                    if isinstance(b, str) and len(b) > 500 and image_items:
+                        image_items[-1]["result"] = b
+                elif et == "response.image_generation_call.completed":
+                    if image_items:
+                        image_items[-1]["status"] = "completed"
+                elif et == "response.completed":
+                    response_obj = ev.get("response") or {}
+                    usage = response_obj.get("usage", {}) or {}
+                    response_id = response_obj.get("id", "") or response_id
+
+    # Build OpenAI-Responses-shaped output array.
+    output: list[dict] = []
+    if text:
+        output.append({
+            "type": "message", "role": "assistant",
+            "content": [{"type": "output_text", "text": text}],
+        })
+    for tc in tools_by_idx.values():
+        output.append({
+            "type": "function_call",
+            "call_id": tc["id"], "name": tc["name"], "arguments": tc["args"],
+        })
+    output.extend(image_items)
+
+    return {
+        "id": response_id or f"resp_{uuid.uuid4().hex[:24]}",
+        "object": "response",
+        "created_at": int(time.time()),
+        "model": model,
+        "status": "completed",
+        "output": output,
+        "usage": {
+            "input_tokens": usage.get("input_tokens", 0),
+            "output_tokens": usage.get("output_tokens", 0),
+            "total_tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
+        },
+    }
+
+
 # ---- image generation (used by /v1/images/generations) -------------------
 
 async def generate_image(prompt: str, n: int = 1) -> list[str]:

@@ -153,6 +153,20 @@ async def v1_messages(req: Request):
     return JSONResponse(data, status_code=status)
 
 
+@app.post("/v1/responses")
+async def v1_responses(req: Request):
+    """OpenAI Responses API proxy — routes through ChatGPT Codex OAuth.
+    Tools that hit api.openai.com/v1/responses (gstack design-shotgun,
+    OpenAI Agents SDK, etc.) work by setting OPENAI_BASE_URL to altkey."""
+    _auth(req)
+    body = await req.json()
+    from .providers import chatgpt
+    try:
+        return await chatgpt.proxy_responses(body)
+    except Exception as e:
+        raise HTTPException(502, f"upstream error: {e}")
+
+
 @app.post("/v1/images/generations")
 async def v1_images(req: Request):
     """OpenAI-compatible image generation. Routes to ChatGPT's image_generation
