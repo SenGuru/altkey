@@ -42,6 +42,12 @@ app.add_middleware(
 DASHBOARD = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
 
 
+# Transparent mode: when altkey intercepts hardcoded endpoints (api.openai.com
+# etc), the calling app sends whatever key it was given — possibly a real
+# OpenAI key or a dummy. So in transparent mode we accept any key.
+_TRANSPARENT = os.environ.get("ALTKEY_TRANSPARENT") == "1"
+
+
 def _auth(req: Request) -> str:
     """Validate the key and return it (so callers can resolve its provider scope)."""
     # Accept OpenAI-style (Authorization: Bearer) or Anthropic-style (x-api-key).
@@ -51,6 +57,8 @@ def _auth(req: Request) -> str:
         key = hdr.split(" ", 1)[1].strip()
     elif req.headers.get("x-api-key"):
         key = req.headers["x-api-key"].strip()
+    if _TRANSPARENT:
+        return key  # any key (or none) accepted; no scope enforced
     if not key:
         raise HTTPException(401, "missing api key")
     if not store.key_exists(key):
@@ -340,8 +348,16 @@ async def admin_revoke(body: RevokeReq):
 def run():
     import uvicorn
     host = os.environ.get("ALTKEY_HOST", "127.0.0.1")
-    port = int(os.environ.get("ALTKEY_PORT", os.environ.get("PORT", "8787")))
-    uvicorn.run("app.main:app", host=host, port=port, reload=False)
+    cert = os.environ.get("ALTKEY_TLS_CERT")
+    key = os.environ.get("ALTKEY_TLS_KEY")
+    if cert and key:
+        # Transparent mode: serve HTTPS on 443 (or ALTKEY_PORT) for intercepted hosts.
+        port = int(os.environ.get("ALTKEY_PORT", "443"))
+        uvicorn.run("app.main:app", host=host, port=port, reload=False,
+                    ssl_certfile=cert, ssl_keyfile=key)
+    else:
+        port = int(os.environ.get("ALTKEY_PORT", os.environ.get("PORT", "8787")))
+        uvicorn.run("app.main:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":

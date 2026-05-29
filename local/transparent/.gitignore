@@ -1,0 +1,3 @@
+# Never commit generated certs/keys — the CA private key is sensitive.
+*.crt
+*.key
