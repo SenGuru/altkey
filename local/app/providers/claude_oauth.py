@@ -45,7 +45,7 @@ def start_oauth() -> dict:
     opens; stashes the PKCE verifier so finish_oauth() can complete it."""
     import hashlib
     import os as _os
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, quote
     verifier = _b64url(_os.urandom(32))
     challenge = _b64url(hashlib.sha256(verifier.encode()).digest())
     state = _b64url(_os.urandom(16))
@@ -60,7 +60,9 @@ def start_oauth() -> dict:
         "code_challenge_method": "S256",
         "state": state,
     }
-    return {"url": f"{_AUTHORIZE_URL}?{urlencode(params)}"}
+    # quote_via=quote → spaces become %20 (not +); Claude's authorize endpoint
+    # rejects + as "Invalid request format".
+    return {"url": f"{_AUTHORIZE_URL}?{urlencode(params, quote_via=quote)}"}
 
 
 async def finish_oauth(code_input: str) -> dict:
