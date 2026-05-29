@@ -23,10 +23,75 @@ NATIVE = True  # exposes openai_stream/openai_completion (handles tool calls)
 _API = "https://api.anthropic.com/v1/messages"
 _MODELS_API = "https://api.anthropic.com/v1/models"
 _TOKEN_API = "https://console.anthropic.com/v1/oauth/token"
-# Public Claude Code OAuth client id (used only to refresh the user's own token).
+# Public Claude Code OAuth client id (used only to authorize the user's own sub).
 _CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 _ATTEST = "You are Claude Code, Anthropic's official CLI for Claude."
 _BETA = "oauth-2025-04-20"
+
+# OAuth "Connect with Claude" flow (PKCE). The console callback shows the user a
+# code to paste — no CLI, no localhost redirect needed (works for hosted too).
+_AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
+_REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback"
+_SCOPES = "org:create_api_key user:profile user:inference"
+
+
+def _b64url(data: bytes) -> str:
+    import base64
+    return base64.urlsafe_b64encode(data).decode().rstrip("=")
+
+
+def start_oauth() -> dict:
+    """Begin the Connect-with-Claude flow. Returns the authorize URL the user
+    opens; stashes the PKCE verifier so finish_oauth() can complete it."""
+    import hashlib
+    import os as _os
+    from urllib.parse import urlencode
+    verifier = _b64url(_os.urandom(32))
+    challenge = _b64url(hashlib.sha256(verifier.encode()).digest())
+    state = _b64url(_os.urandom(16))
+    store.save_session("_oauth_pkce", {"verifier": verifier, "state": state, "ts": int(time.time())})
+    params = {
+        "code": "true",
+        "client_id": _CLIENT_ID,
+        "response_type": "code",
+        "redirect_uri": _REDIRECT_URI,
+        "scope": _SCOPES,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "state": state,
+    }
+    return {"url": f"{_AUTHORIZE_URL}?{urlencode(params)}"}
+
+
+async def finish_oauth(code_input: str) -> dict:
+    """Complete the flow with the code the user pasted (format: CODE#STATE)."""
+    pkce = store.load_session("_oauth_pkce")
+    if not pkce:
+        raise RuntimeError("no pending OAuth flow — click Connect Claude first")
+    code = code_input.strip()
+    state = pkce["state"]
+    if "#" in code:
+        code, state = code.split("#", 1)
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post(_TOKEN_API, json={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": _REDIRECT_URI,
+            "client_id": _CLIENT_ID,
+            "code_verifier": pkce["verifier"],
+            "state": state,
+        })
+    if r.status_code >= 400:
+        raise RuntimeError(f"oauth exchange {r.status_code}: {r.text[:300]}")
+    d = r.json()
+    store.save_session("claude_oauth", {
+        "accessToken": d["access_token"],
+        "refreshToken": d.get("refresh_token", ""),
+        "expiresAt": int((time.time() + d.get("expires_in", 28800)) * 1000),
+        "subscriptionType": (d.get("account") or {}).get("subscription_type", "unknown"),
+    })
+    store.delete_session("_oauth_pkce")
+    return {"ok": True, "subscription": (d.get("account") or {}).get("subscription_type", "unknown")}
 
 MODELS = [
     "claude-opus-4-8",

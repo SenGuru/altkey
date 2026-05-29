@@ -333,6 +333,27 @@ async def admin_connect_cli(body: ConnectReq):
     return {"ok": True, "provider": "claude", "mode": "oauth", "subscription": oauth.get("subscriptionType")}
 
 
+@app.post("/admin/oauth/start", dependencies=[Depends(_check_admin)])
+async def admin_oauth_start():
+    from .providers import claude_oauth
+    return claude_oauth.start_oauth()
+
+
+class OAuthFinishReq(BaseModel):
+    code: str
+
+
+@app.post("/admin/oauth/finish", dependencies=[Depends(_check_admin)])
+async def admin_oauth_finish(body: OAuthFinishReq):
+    from .providers import claude_oauth
+    try:
+        res = await claude_oauth.finish_oauth(body.code)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    asyncio.create_task(providers.detect_one("claude_oauth"))
+    return res
+
+
 @app.post("/admin/detect", dependencies=[Depends(_check_admin)])
 async def admin_detect():
     return {"ok": True, "detected": await providers.detect_all()}

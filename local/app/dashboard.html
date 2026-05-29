@@ -36,6 +36,11 @@
   <div class="card">
     <div style="font-weight:600;margin-bottom:10px">Accounts</div>
     <div id="providers"></div>
+    <div class="row" style="border-top:1px solid #1a1d23;margin-top:8px;padding-top:12px;">
+      <div><span class="name">Claude (real API, tool calling)</span>
+        <div class="meta">Connect with Claude — no terminal, uses your subscription</div></div>
+      <button onclick="connectClaudeOAuth()">Connect with Claude</button>
+    </div>
   </div>
 
   <div class="card">
@@ -101,6 +106,17 @@ async function connect(provider) {
   const btn = event.target; btn.disabled = true; btn.textContent = "Opening browser…";
   const r = await fetch("/admin/connect", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({provider})}).then(r=>r.json());
   if (!r.ok) alert("Connect failed: " + r.error);
+  await refresh();
+}
+async function connectClaudeOAuth() {
+  const r = await fetch("/admin/oauth/start", {method:"POST"}).then(r=>r.json());
+  if (!r.url) { alert("Failed to start OAuth"); return; }
+  window.open(r.url, "_blank");
+  const code = prompt("A Claude approval page opened in a new tab.\n\nApprove, then copy the code it shows you and paste it here:");
+  if (!code) return;
+  const res = await fetch("/admin/oauth/finish", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code})}).then(r=>r.json());
+  if (!res.ok) { alert("Connect failed: " + res.error); return; }
+  alert("Connected Claude (subscription: " + (res.subscription||"?") + "). Tool calling enabled.");
   await refresh();
 }
 async function disconnect(provider) {
