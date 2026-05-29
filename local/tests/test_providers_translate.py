@@ -79,36 +79,50 @@ def test_claude_openai_chunk_finish():
     assert c["choices"][0]["delta"] == {}
 
 
-def test_chatgpt_to_parts_string():
-    parts = chatgpt._to_parts([{"role": "user", "content": "hi"}])
-    assert parts[0]["author"]["role"] == "user"
-    assert parts[0]["content"]["parts"] == ["hi"]
-    assert parts[0]["content"]["content_type"] == "text"
-
-
-def test_chatgpt_to_parts_list_content():
-    parts = chatgpt._to_parts([
-        {"role": "user", "content": [
-            {"type": "text", "text": "hi"},
-            {"type": "text", "text": " there"},
-        ]}
+def test_chatgpt_build_input_text():
+    instr, items = chatgpt._build_input([
+        {"role": "system", "content": "be brief"},
+        {"role": "user", "content": "hi"},
     ])
-    assert parts[0]["content"]["parts"] == ["hi there"]
+    assert instr == "be brief"
+    assert items[0]["type"] == "message"
+    assert items[0]["role"] == "user"
+    assert items[0]["content"][0] == {"type": "input_text", "text": "hi"}
 
 
-def test_chatgpt_to_parts_system_role():
-    parts = chatgpt._to_parts([{"role": "system", "content": "be brief"}])
-    assert parts[0]["author"]["role"] == "system"
+def test_chatgpt_build_input_image():
+    _, items = chatgpt._build_input([
+        {"role": "user", "content": [
+            {"type": "text", "text": "what is this"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+        ]},
+    ])
+    parts = items[0]["content"]
+    assert parts[0] == {"type": "input_text", "text": "what is this"}
+    assert parts[1] == {"type": "input_image", "image_url": "data:image/png;base64,AAAA"}
 
 
-def test_chatgpt_device_id_from_cookie():
-    sess = {"cookies": [{"name": "oai-did", "value": "device-123"}]}
-    assert chatgpt._device_id(sess) == "device-123"
+def test_chatgpt_build_input_tool_history():
+    _, items = chatgpt._build_input([
+        {"role": "assistant", "content": None, "tool_calls": [
+            {"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": "{}"}}]},
+        {"role": "tool", "tool_call_id": "call_1", "content": "sunny"},
+    ])
+    assert items[0]["type"] == "function_call" and items[0]["call_id"] == "call_1"
+    assert items[1]["type"] == "function_call_output" and items[1]["output"] == "sunny"
 
 
-def test_chatgpt_device_id_fallback():
-    did = chatgpt._device_id({"cookies": []})
-    assert len(did) > 0
+def test_chatgpt_tools_translation():
+    out = chatgpt._tools([{"type": "function", "function": {
+        "name": "f", "description": "d", "parameters": {"type": "object", "properties": {}}}}])
+    assert out[0] == {"type": "function", "name": "f", "description": "d",
+                      "parameters": {"type": "object", "properties": {}}}
+
+
+def test_chatgpt_resolve_model():
+    assert chatgpt._resolve_model("gpt-5.5") == "gpt-5.5"
+    assert chatgpt._resolve_model("gpt-4o") == "gpt-5.5"
+    assert chatgpt._resolve_model("anything-unknown") == "gpt-5.5"
 
 
 def test_gemini_flatten_basic():
