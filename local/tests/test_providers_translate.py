@@ -1,11 +1,12 @@
 from app.providers import for_model, list_models
-from app.providers import claude, chatgpt, gemini
+from app.providers import claude, chatgpt, gemini, claude_oauth
 
 
 def test_for_model_routing_claude():
-    assert for_model("claude-sonnet-4-5") is claude
-    assert for_model("claude-opus-4-5") is claude
-    assert for_model("claude-3-5-haiku-20241022") is claude
+    # routes to a Claude provider — chat-relay OR oauth depending on what's connected
+    assert for_model("claude-sonnet-4-5") in (claude, claude_oauth)
+    assert for_model("claude-opus-4-5") in (claude, claude_oauth)
+    assert for_model("claude-3-5-haiku-20241022") in (claude, claude_oauth)
 
 
 def test_for_model_routing_chatgpt():
