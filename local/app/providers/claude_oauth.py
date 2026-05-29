@@ -55,7 +55,7 @@ def start_oauth() -> dict:
     from urllib.parse import urlencode, quote
     verifier = _b64url(_os.urandom(32))
     challenge = _b64url(hashlib.sha256(verifier.encode()).digest())
-    state = _b64url(_os.urandom(16))
+    state = _b64url(_os.urandom(32))  # 32 bytes → 43 chars, matching setup-token
     store.save_session("_oauth_pkce", {"verifier": verifier, "state": state, "ts": int(time.time())})
     params = {
         "code": "true",
