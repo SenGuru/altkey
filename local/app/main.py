@@ -72,6 +72,16 @@ async def v1_chat(req: Request):
         raise HTTPException(400, f"unknown model: {model}")
     want_stream = bool(body.get("stream"))
 
+    # NATIVE providers (OAuth → real API) handle the full OpenAI surface
+    # themselves, including tool calls, and emit OpenAI-formatted output.
+    if getattr(mod, "NATIVE", False):
+        if want_stream:
+            return StreamingResponse(mod.openai_stream(body), media_type="text/event-stream")
+        try:
+            return await mod.openai_completion(body)
+        except Exception as e:
+            raise HTTPException(502, f"upstream error: {e}")
+
     if want_stream:
         async def gen():
             try:
@@ -245,6 +255,29 @@ async def admin_import(body: ImportReq):
 
 class MintReq(BaseModel):
     label: str = ""
+
+
+@app.post("/admin/connect-cli", dependencies=[Depends(_check_admin)])
+async def admin_connect_cli(body: ConnectReq):
+    """Connect Claude via the local Claude Code OAuth token (real Anthropic API,
+    enables tool calling). Reads ~/.claude/.credentials.json."""
+    if body.provider != "claude":
+        return JSONResponse({"ok": False, "error": "only claude CLI supported here"}, status_code=400)
+    path = Path.home() / ".claude" / ".credentials.json"
+    if not path.exists():
+        return JSONResponse({"ok": False, "error": "no Claude Code credentials found — log into Claude Code first"}, status_code=400)
+    try:
+        oauth = json.loads(path.read_text())["claudeAiOauth"]
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"could not read credentials: {e}"}, status_code=400)
+    store.save_session("claude_oauth", {
+        "accessToken": oauth["accessToken"],
+        "refreshToken": oauth.get("refreshToken", ""),
+        "expiresAt": oauth.get("expiresAt", 0),
+        "subscriptionType": oauth.get("subscriptionType", "unknown"),
+    })
+    asyncio.create_task(providers.detect_one("claude_oauth"))
+    return {"ok": True, "provider": "claude", "mode": "oauth", "subscription": oauth.get("subscriptionType")}
 
 
 @app.post("/admin/detect", dependencies=[Depends(_check_admin)])

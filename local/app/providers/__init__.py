@@ -1,8 +1,16 @@
-from . import claude, chatgpt, gemini
+from . import claude, chatgpt, gemini, claude_oauth
 from .. import store
 
+
+def _claude_module():
+    """Prefer the OAuth (real-API) Claude path when a CLI token is connected;
+    fall back to the chat-backend relay otherwise."""
+    if store.load_session("claude_oauth"):
+        return claude_oauth
+    return claude
+
+
 _BY_PREFIX = [
-    ("claude", claude),
     ("gpt", chatgpt),
     ("o1", chatgpt),
     ("o3", chatgpt),
@@ -14,6 +22,8 @@ _BY_PREFIX = [
 
 def for_model(model: str):
     m = model.lower()
+    if m.startswith("claude"):
+        return _claude_module()
     for prefix, mod in _BY_PREFIX:
         if m.startswith(prefix):
             return mod
@@ -21,37 +31,39 @@ def for_model(model: str):
 
 
 def list_models() -> list[dict]:
-    """Prefer each provider's live-detected models (cached on connect); fall
-    back to the static catalog when nothing has been detected yet."""
+    """Prefer each provider's live-detected models; fall back to static."""
     out = []
     seen = set()
-    for mod in (claude, chatgpt, gemini):
-        cached = store.load_detected_models(mod.NAME)
+    claude_mod = _claude_module()
+    cache_name = "claude_oauth" if claude_mod is claude_oauth else "claude"
+    plan = [(claude_mod, cache_name), (chatgpt, "chatgpt"), (gemini, "gemini")]
+    for mod, name in plan:
+        cached = store.load_detected_models(name)
         detected = cached["models"] if cached else []
-        # detected first (real availability), then static aliases for coverage
         for mid in [*detected, *mod.MODELS]:
-            if mid and (mod.NAME, mid) not in seen:
+            if mid and ("claude", mid) not in seen and (mod.NAME, mid) not in seen:
                 seen.add((mod.NAME, mid))
                 out.append({"id": mid, "object": "model", "owned_by": mod.NAME})
     return out
 
 
 async def detect_all() -> dict:
-    """Run detection for every connected provider; returns {provider: models}."""
     results = {}
-    for mod in (claude, chatgpt, gemini):
-        sess = store.load_session(mod.NAME)
-        if not sess:
+    plan = [("claude", _claude_module()), ("chatgpt", chatgpt), ("gemini", gemini)]
+    for label, mod in plan:
+        sess_name = "claude_oauth" if mod is claude_oauth else label
+        if not store.load_session(sess_name):
             continue
         try:
-            results[mod.NAME] = await mod.detect(sess)
+            results[label] = await mod.detect(store.load_session(sess_name))
         except Exception as e:
-            results[mod.NAME] = {"error": str(e)[:200]}
+            results[label] = {"error": str(e)[:200]}
     return results
 
 
 async def detect_one(provider: str) -> list[str]:
-    mod = {"claude": claude, "chatgpt": chatgpt, "gemini": gemini}.get(provider)
+    mapping = {"claude": claude, "claude_oauth": claude_oauth, "chatgpt": chatgpt, "gemini": gemini}
+    mod = mapping.get(provider)
     if not mod:
         return []
     sess = store.load_session(provider)
