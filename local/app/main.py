@@ -43,10 +43,15 @@ DASHBOARD = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8
 
 
 def _auth(req: Request) -> None:
+    # Accept OpenAI-style (Authorization: Bearer) or Anthropic-style (x-api-key).
+    key = ""
     hdr = req.headers.get("authorization", "")
-    if not hdr.lower().startswith("bearer "):
-        raise HTTPException(401, "missing bearer token")
-    key = hdr.split(" ", 1)[1].strip()
+    if hdr.lower().startswith("bearer "):
+        key = hdr.split(" ", 1)[1].strip()
+    elif req.headers.get("x-api-key"):
+        key = req.headers["x-api-key"].strip()
+    if not key:
+        raise HTTPException(401, "missing api key")
     if not store.key_exists(key):
         raise HTTPException(401, "invalid api key")
 
@@ -114,6 +119,22 @@ async def v1_chat(req: Request):
         }],
         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
     }
+
+
+@app.post("/v1/messages")
+async def v1_messages(req: Request):
+    """Native Anthropic Messages API — lets Anthropic-SDK clients (e.g. Hermes'
+    'anthropic' provider) point ANTHROPIC_BASE_URL at altkey. Backed by the
+    Claude OAuth provider."""
+    _auth(req)
+    from .providers import claude_oauth
+    if not store.load_session("claude_oauth"):
+        raise HTTPException(400, "claude (oauth) not connected — run Connect Claude (CLI)")
+    body = await req.json()
+    if body.get("stream"):
+        return StreamingResponse(claude_oauth.anthropic_messages_stream(body), media_type="text/event-stream")
+    status, data = await claude_oauth.anthropic_messages(body)
+    return JSONResponse(data, status_code=status)
 
 
 class ConnectReq(BaseModel):

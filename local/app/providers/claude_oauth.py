@@ -8,11 +8,14 @@ attestation system prompt.
 import json
 import time
 import uuid
+from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
 
 from .. import store
+
+_LIVE_CREDS = Path.home() / ".claude" / ".credentials.json"
 
 NAME = "claude"
 NATIVE = True  # exposes openai_stream/openai_completion (handles tool calls)
@@ -49,11 +52,37 @@ def _headers(token: str) -> dict:
 
 # ---- credentials / refresh ----------------------------------------------
 
+def _read_live() -> dict | None:
+    """Read the live Claude Code credentials (kept fresh by Claude Code itself).
+    Preferred locally — avoids refresh-token rotation conflicts."""
+    try:
+        if _LIVE_CREDS.exists():
+            return json.loads(_LIVE_CREDS.read_text()).get("claudeAiOauth")
+    except Exception:
+        pass
+    return None
+
+
 async def _token() -> str:
+    # 1) Prefer the live Claude Code file if its token is still valid.
+    live = _read_live()
+    if live and live.get("expiresAt", 0) / 1000 > time.time() + 60:
+        store.save_session("claude_oauth", {
+            "accessToken": live["accessToken"],
+            "refreshToken": live.get("refreshToken", ""),
+            "expiresAt": live.get("expiresAt", 0),
+            "subscriptionType": live.get("subscriptionType", "unknown"),
+        })
+        return live["accessToken"]
+
+    # 2) Fall back to our stored copy, refreshing if needed.
     creds = store.load_session("claude_oauth")
     if not creds:
         raise RuntimeError("claude (oauth) not connected — run Connect Claude (CLI)")
     if creds.get("expiresAt", 0) / 1000 <= time.time() + 60:
+        # If the live file has a (newer) refresh token, prefer it.
+        if live and live.get("refreshToken"):
+            creds = dict(creds, refreshToken=live["refreshToken"])
         creds = await _refresh(creds)
     return creds["accessToken"]
 
@@ -228,6 +257,49 @@ async def openai_completion(req: dict) -> dict:
             "total_tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
         },
     }
+
+
+def _inject_attestation(body: dict) -> dict:
+    """Anthropic-native passthrough: prepend the Claude Code attestation block
+    to whatever system prompt the client sent (required for oauth tokens)."""
+    body = dict(body)
+    sys = body.get("system")
+    attest = {"type": "text", "text": _ATTEST}
+    if sys is None:
+        body["system"] = [attest]
+    elif isinstance(sys, str):
+        body["system"] = [attest, {"type": "text", "text": sys}]
+    elif isinstance(sys, list):
+        if not (sys and isinstance(sys[0], dict) and sys[0].get("text", "").startswith("You are Claude Code")):
+            body["system"] = [attest, *sys]
+    body["model"] = _resolve_model(body.get("model", "claude-sonnet-4-6"))
+    return body
+
+
+async def anthropic_messages(body: dict):
+    """Native Anthropic /v1/messages passthrough (non-streaming). Returns the
+    raw Anthropic JSON so clients using the Anthropic SDK work unchanged."""
+    token = await _token()
+    fwd = _inject_attestation(body)
+    fwd.pop("stream", None)
+    async with httpx.AsyncClient(timeout=httpx.Timeout(120, read=300)) as c:
+        r = await c.post(_API, headers=_headers(token), json=fwd)
+    return r.status_code, r.json() if r.headers.get("content-type", "").startswith("application/json") else {"error": r.text[:400]}
+
+
+async def anthropic_messages_stream(body: dict) -> AsyncIterator[str]:
+    """Native Anthropic /v1/messages passthrough (streaming) — forwards the raw
+    Anthropic SSE event stream unchanged."""
+    token = await _token()
+    fwd = dict(_inject_attestation(body), stream=True)
+    async with httpx.AsyncClient(timeout=httpx.Timeout(120, read=300)) as c:
+        async with c.stream("POST", _API, headers=_headers(token), json=fwd) as r:
+            if r.status_code >= 400:
+                err = await r.aread()
+                yield f"event: error\ndata: {json.dumps({'type':'error','error':{'message':err[:300].decode('utf-8','ignore')}})}\n\n"
+                return
+            async for line in r.aiter_raw():
+                yield line.decode("utf-8", "ignore")
 
 
 async def openai_stream(req: dict) -> AsyncIterator[str]:
