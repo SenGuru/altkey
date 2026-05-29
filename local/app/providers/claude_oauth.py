@@ -35,9 +35,11 @@ _SCOPES = "user:inference"
 
 
 def _redirect_uri() -> str:
+    # Path MUST be exactly /callback — Claude validates the loopback redirect
+    # path strictly (it's what `claude setup-token` registers).
     import os as _os
     port = _os.environ.get("ALTKEY_PORT", "8787")
-    return f"http://localhost:{port}/oauth/callback"
+    return f"http://localhost:{port}/callback"
 
 
 def _b64url(data: bytes) -> str:

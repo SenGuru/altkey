@@ -82,7 +82,7 @@ async def dashboard() -> str:
     return DASHBOARD
 
 
-@app.get("/oauth/callback", response_class=HTMLResponse)
+@app.get("/callback", response_class=HTMLResponse)
 async def oauth_callback(code: str = "", state: str = "", error: str = ""):
     """Claude redirects here after approval — we exchange the code automatically.
     No pasting needed."""
