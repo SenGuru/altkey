@@ -30,6 +30,17 @@ def _check_admin(request: Request) -> None:
 
 app = FastAPI(title="altkey", docs_url=None, redoc_url=None)
 
+
+@app.on_event("startup")
+async def _startup():
+    # Server deploys: seed the Claude OAuth token from a secret (no ~/.claude
+    # file on a headless host) and keep it refreshed proactively.
+    from .providers import claude_oauth
+    seeded = claude_oauth.seed_from_env()
+    if seeded:
+        print("[altkey] seeded claude_oauth token from ALTKEY_CLAUDE_OAUTH_JSON")
+    asyncio.create_task(claude_oauth.refresh_loop())
+
 # Allow the companion browser extension (chrome-extension:// / moz-extension://)
 # to call the admin capture endpoint. Server is bound to 127.0.0.1 only.
 app.add_middleware(

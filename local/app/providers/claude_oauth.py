@@ -63,6 +63,53 @@ def _read_live() -> dict | None:
     return None
 
 
+import os
+
+
+def seed_from_env() -> bool:
+    """On a headless server there's no ~/.claude file. Seed the OAuth token once
+    from the ALTKEY_CLAUDE_OAUTH_JSON secret (the claudeAiOauth object as JSON).
+    Only seeds if we don't already have a stored session (so the server keeps
+    its own refreshed lineage across restarts when storage persists)."""
+    if store.load_session("claude_oauth"):
+        return False
+    raw = os.environ.get("ALTKEY_CLAUDE_OAUTH_JSON")
+    if not raw:
+        return False
+    try:
+        d = json.loads(raw)
+        d = d.get("claudeAiOauth", d)  # accept either the full file or the inner object
+        store.save_session("claude_oauth", {
+            "accessToken": d["accessToken"],
+            "refreshToken": d.get("refreshToken", ""),
+            "expiresAt": d.get("expiresAt", 0),
+            "subscriptionType": d.get("subscriptionType", "unknown"),
+        })
+        return True
+    except Exception:
+        return False
+
+
+async def refresh_loop():
+    """Proactively refresh the OAuth token before it expires so it never lapses
+    on an idle server. Runs forever; no-ops when not connected."""
+    import asyncio
+    while True:
+        try:
+            creds = store.load_session("claude_oauth")
+            if creds:
+                # refresh ~10 min before expiry (or now if already past)
+                wait = max(0, creds.get("expiresAt", 0) / 1000 - time.time() - 600)
+                await asyncio.sleep(min(wait, 3600))
+                creds = store.load_session("claude_oauth")
+                if creds and creds.get("expiresAt", 0) / 1000 <= time.time() + 600:
+                    await _refresh(creds)
+            else:
+                await asyncio.sleep(300)
+        except Exception:
+            await asyncio.sleep(300)
+
+
 async def _token() -> str:
     # 1) Prefer the live Claude Code file if its token is still valid.
     live = _read_live()
