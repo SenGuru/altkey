@@ -43,6 +43,12 @@
       <div style="font-weight:600">API keys</div>
       <div style="display:flex;gap:8px">
         <input id="label" placeholder="label (optional)" />
+        <select id="scope" title="Which provider this key can use">
+          <option value="">All providers</option>
+          <option value="claude">Claude only</option>
+          <option value="chatgpt">ChatGPT only</option>
+          <option value="gemini">Gemini only</option>
+        </select>
         <button onclick="mint()">Mint key</button>
       </div>
     </div>
@@ -84,6 +90,7 @@ async function refresh() {
   document.getElementById("keys").innerHTML = s.keys.length
     ? s.keys.map(k => `<div class="keyrow">
         <code title="${k.key}">${k.key}</code>
+        <span class="meta">${k.provider ? k.provider+" only" : "all"}</span>
         <button class="ghost" onclick="navigator.clipboard.writeText('${k.key}')">Copy</button>
         <button class="ghost" onclick="revoke('${k.key}')">Revoke</button>
       </div>`).join("")
@@ -118,7 +125,8 @@ async function pasteCookie(provider) {
 }
 async function mint() {
   const label = document.getElementById("label").value;
-  await fetch("/admin/keys", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({label})});
+  const provider = document.getElementById("scope").value || null;
+  await fetch("/admin/keys", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({label, provider})});
   document.getElementById("label").value = "";
   refresh();
 }

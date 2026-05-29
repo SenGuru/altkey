@@ -123,12 +123,22 @@ def delete_session(provider: str) -> None:
         c.execute("DELETE FROM sessions WHERE provider = ?", (provider,))
 
 
-def mint_key(label: str = "") -> str:
+def _ensure_provider_column() -> None:
+    with _conn() as c:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(api_keys)").fetchall()]
+        if "provider" not in cols:
+            c.execute("ALTER TABLE api_keys ADD COLUMN provider TEXT")
+
+
+def mint_key(label: str = "", provider: str | None = None) -> str:
+    """Mint an API key. provider=None → all-providers key (model name routes).
+    provider in {claude,chatgpt,gemini} → key only works for that provider."""
+    _ensure_provider_column()
     key = "sk-alt-" + secrets.token_urlsafe(32)
     with _conn() as c:
         c.execute(
-            "INSERT INTO api_keys (key, label, created_at) VALUES (?, ?, ?)",
-            (key, label, int(time.time())),
+            "INSERT INTO api_keys (key, label, created_at, provider) VALUES (?, ?, ?, ?)",
+            (key, label, int(time.time()), provider),
         )
     return key
 
@@ -138,10 +148,19 @@ def key_exists(key: str) -> bool:
         return c.execute("SELECT 1 FROM api_keys WHERE key = ?", (key,)).fetchone() is not None
 
 
-def list_keys() -> list[dict]:
+def key_provider(key: str) -> str | None:
+    """The provider a key is scoped to, or None for all-providers keys."""
+    _ensure_provider_column()
     with _conn() as c:
-        rows = c.execute("SELECT key, label, created_at FROM api_keys ORDER BY created_at DESC").fetchall()
-    return [{"key": k, "label": l, "created_at": t} for k, l, t in rows]
+        row = c.execute("SELECT provider FROM api_keys WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else None
+
+
+def list_keys() -> list[dict]:
+    _ensure_provider_column()
+    with _conn() as c:
+        rows = c.execute("SELECT key, label, created_at, provider FROM api_keys ORDER BY created_at DESC").fetchall()
+    return [{"key": k, "label": l, "created_at": t, "provider": p} for k, l, t, p in rows]
 
 
 def revoke_key(key: str) -> None:

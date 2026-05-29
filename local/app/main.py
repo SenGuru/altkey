@@ -42,7 +42,8 @@ app.add_middleware(
 DASHBOARD = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
 
 
-def _auth(req: Request) -> None:
+def _auth(req: Request) -> str:
+    """Validate the key and return it (so callers can resolve its provider scope)."""
     # Accept OpenAI-style (Authorization: Bearer) or Anthropic-style (x-api-key).
     key = ""
     hdr = req.headers.get("authorization", "")
@@ -54,6 +55,7 @@ def _auth(req: Request) -> None:
         raise HTTPException(401, "missing api key")
     if not store.key_exists(key):
         raise HTTPException(401, "invalid api key")
+    return key
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -63,18 +65,25 @@ async def dashboard() -> str:
 
 @app.get("/v1/models")
 async def v1_models(req: Request) -> dict:
-    _auth(req)
-    return {"object": "list", "data": providers.list_models()}
+    key = _auth(req)
+    scope = store.key_provider(key)
+    models = providers.list_models()
+    if scope:
+        models = [m for m in models if m["owned_by"] == scope]
+    return {"object": "list", "data": models}
 
 
 @app.post("/v1/chat/completions")
 async def v1_chat(req: Request):
-    _auth(req)
+    key = _auth(req)
     body = await req.json()
     model = body.get("model") or "claude-sonnet-4-5"
     mod = providers.for_model(model)
     if mod is None:
         raise HTTPException(400, f"unknown model: {model}")
+    scope = store.key_provider(key)
+    if scope and mod.NAME != scope:
+        raise HTTPException(403, f"this key is scoped to '{scope}' and cannot use model '{model}' ({mod.NAME})")
     want_stream = bool(body.get("stream"))
 
     # NATIVE providers (OAuth → real API) handle the full OpenAI surface
@@ -126,7 +135,10 @@ async def v1_messages(req: Request):
     """Native Anthropic Messages API — lets Anthropic-SDK clients (e.g. Hermes'
     'anthropic' provider) point ANTHROPIC_BASE_URL at altkey. Backed by the
     Claude OAuth provider."""
-    _auth(req)
+    key = _auth(req)
+    scope = store.key_provider(key)
+    if scope and scope != "claude":
+        raise HTTPException(403, f"this key is scoped to '{scope}', not claude")
     from .providers import claude_oauth
     if not store.load_session("claude_oauth"):
         raise HTTPException(400, "claude (oauth) not connected — run Connect Claude (CLI)")
@@ -276,6 +288,7 @@ async def admin_import(body: ImportReq):
 
 class MintReq(BaseModel):
     label: str = ""
+    provider: str | None = None  # None = all providers; else claude/chatgpt/gemini
 
 
 @app.post("/admin/connect-cli", dependencies=[Depends(_check_admin)])
@@ -308,7 +321,10 @@ async def admin_detect():
 
 @app.post("/admin/keys", dependencies=[Depends(_check_admin)])
 async def admin_mint(body: MintReq):
-    return {"key": store.mint_key(body.label)}
+    prov = body.provider
+    if prov not in (None, "claude", "chatgpt", "gemini"):
+        return JSONResponse({"ok": False, "error": f"invalid provider scope: {prov}"}, status_code=400)
+    return {"key": store.mint_key(body.label, prov), "provider": prov}
 
 
 class RevokeReq(BaseModel):
