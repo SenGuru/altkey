@@ -1,0 +1,179 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[derive(DeriveIden)]
+enum Identity {
+    Table,
+    Id,
+    AccountId,
+    Provider,
+    ProviderUserId,
+    EmailAtProvider,
+    CreatedAt,
+}
+#[derive(DeriveIden)]
+enum Session {
+    Table,
+    Id,
+    AccountId,
+    TokenHash,
+    CreatedAt,
+    ExpiresAt,
+    LastSeenAt,
+}
+#[derive(DeriveIden)]
+enum MagicLink {
+    Table,
+    Id,
+    Email,
+    TokenHash,
+    ExpiresAt,
+    ConsumedAt,
+}
+#[derive(DeriveIden)]
+enum OauthFlow {
+    Table,
+    State,
+    Provider,
+    PkceVerifier,
+    ReturnTo,
+    ExpiresAt,
+}
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .create_table(
+                Table::create()
+                    .table(Identity::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(Identity::Id).uuid().not_null().primary_key())
+                    .col(ColumnDef::new(Identity::AccountId).uuid().not_null())
+                    .col(ColumnDef::new(Identity::Provider).string().not_null())
+                    .col(ColumnDef::new(Identity::ProviderUserId).string().not_null())
+                    .col(ColumnDef::new(Identity::EmailAtProvider).string().null())
+                    .col(
+                        ColumnDef::new(Identity::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_index(
+                Index::create()
+                    .name("idx_identity_provider_uid_unique")
+                    .table(Identity::Table)
+                    .col(Identity::Provider)
+                    .col(Identity::ProviderUserId)
+                    .unique()
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Session::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(Session::Id).uuid().not_null().primary_key())
+                    .col(ColumnDef::new(Session::AccountId).uuid().not_null())
+                    .col(ColumnDef::new(Session::TokenHash).string().not_null())
+                    .col(
+                        ColumnDef::new(Session::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
+                    .col(
+                        ColumnDef::new(Session::ExpiresAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(Session::LastSeenAt).timestamp_with_time_zone().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_index(
+                Index::create()
+                    .name("idx_session_token_hash_unique")
+                    .table(Session::Table)
+                    .col(Session::TokenHash)
+                    .unique()
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(MagicLink::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(MagicLink::Id).uuid().not_null().primary_key())
+                    .col(ColumnDef::new(MagicLink::Email).string().not_null())
+                    .col(ColumnDef::new(MagicLink::TokenHash).string().not_null())
+                    .col(
+                        ColumnDef::new(MagicLink::ExpiresAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(MagicLink::ConsumedAt).timestamp_with_time_zone().null())
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_index(
+                Index::create()
+                    .name("idx_magic_link_token_hash_unique")
+                    .table(MagicLink::Table)
+                    .col(MagicLink::TokenHash)
+                    .unique()
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(OauthFlow::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(OauthFlow::State)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(OauthFlow::Provider).string().not_null())
+                    .col(ColumnDef::new(OauthFlow::PkceVerifier).string().not_null())
+                    .col(ColumnDef::new(OauthFlow::ReturnTo).string().null())
+                    .col(
+                        ColumnDef::new(OauthFlow::ExpiresAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
+            .await
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(OauthFlow::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(MagicLink::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Session::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(Identity::Table).to_owned())
+            .await
+    }
+}
