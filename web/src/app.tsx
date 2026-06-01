@@ -3,9 +3,9 @@ import { Nav } from './components/Nav';
 
 export function App() {
   return (
-    <div style={{ minHeight: '100vh', fontFamily: 'monospace' }}>
+    <div className="app-shell">
       <Nav />
-      <main style={{ padding: '2rem' }}>
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

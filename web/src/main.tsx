@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './routes';
 
+// Warm-dark / brass design system — must be imported before any component CSS
+import './styles/theme.css';
+
 // Ensure the @hey-api client is configured (baseUrl + credentials) before any
 // query runs. Import for side-effect only — configures the singleton client.
 import './lib/api';

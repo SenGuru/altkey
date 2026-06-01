@@ -2,15 +2,13 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { useMe } from './lib/queries';
 import { App } from './app';
 import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
 import { Billing } from './pages/Billing';
 import { Handles } from './pages/Handles';
 import { Machines } from './pages/Machines';
 import { Keys } from './pages/Keys';
-
-// ─── Placeholder page components (real pages implemented in Tasks 6) ──────────
-function Dashboard() { return <div>Dashboard</div>; }
-function Usage() { return <div>Usage</div>; }
-function Adapters() { return <div>Adapters</div>; }
+import { Usage } from './pages/Usage';
+import { Adapters } from './pages/Adapters';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 function AuthGuard() {

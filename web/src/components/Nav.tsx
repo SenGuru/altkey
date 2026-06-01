@@ -24,29 +24,30 @@ export function Nav() {
   }
 
   return (
-    <nav style={{ display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid #444', alignItems: 'center', flexWrap: 'wrap' }}>
-      {NAV_LINKS.map(({ to, label }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === '/'}
-          style={({ isActive }) => ({
-            fontFamily: 'monospace',
-            textDecoration: 'none',
-            color: isActive ? '#c9a84c' : '#e0d5c5',
-            fontWeight: isActive ? 700 : 400,
-          })}
+    <nav className="nav">
+      <span className="nav-brand">altkey</span>
+      <div className="nav-links">
+        {NAV_LINKS.map(({ to, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+          >
+            {label}
+          </NavLink>
+        ))}
+      </div>
+      <div className="nav-logout">
+        <button
+          className="btn btn-secondary btn-sm"
+          type="button"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
         >
-          {label}
-        </NavLink>
-      ))}
-      <button
-        onClick={handleLogout}
-        disabled={logoutMutation.isPending}
-        style={{ marginLeft: 'auto', fontFamily: 'monospace', cursor: 'pointer', background: 'none', border: '1px solid #c9a84c', color: '#c9a84c', padding: '0.25rem 0.75rem', borderRadius: '4px' }}
-      >
-        {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
-      </button>
+          {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
+        </button>
+      </div>
     </nav>
   );
 }
