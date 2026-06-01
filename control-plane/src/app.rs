@@ -12,6 +12,7 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::adapters::routes::{internal_get_adapter, internal_list_adapters};
 
 pub fn build(state: AppState) -> axum::Router {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
@@ -43,6 +44,8 @@ pub fn build(state: AppState) -> axum::Router {
         // Usage dashboard reads — session-gated
         .routes(routes!(crate::usage::routes::usage_summary))
         .routes(routes!(crate::usage::routes::usage_records))
+        // Adapter catalog — session-gated dashboard view
+        .routes(routes!(crate::adapters::routes::list_adapters))
         .split_for_parts();
 
     // OAuth start/callback are dynamic-path (`/auth/{provider}/...`) and not
@@ -53,7 +56,10 @@ pub fn build(state: AppState) -> axum::Router {
     let router = router
         .route("/auth/:provider/start", get(oauth::start))
         .route("/auth/:provider/callback", get(oauth::callback))
-        .route("/auth/apple/callback", post(oauth::callback_form));
+        .route("/auth/apple/callback", post(oauth::callback_form))
+        // Internal adapter delivery — unauthenticated (manifests are not secret)
+        .route("/internal/adapters", get(internal_list_adapters))
+        .route("/internal/adapters/:slug", get(internal_get_adapter));
 
     router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))

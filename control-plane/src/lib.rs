@@ -13,5 +13,6 @@ pub mod registry;
 pub mod state;
 pub mod routes;
 pub mod usage;
+pub mod adapters;
 pub mod app;
 pub mod openapi;

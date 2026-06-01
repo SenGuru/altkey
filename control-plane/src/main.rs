@@ -16,6 +16,7 @@ async fn main() -> Result<()> {
     let bind_addr = config.bind_addr.clone();
     let db = control_plane::db::connect(&config).await?;
     control_plane::db::run_migrations(&db).await?;
+    control_plane::adapters::store::seed_defaults(&db).await.ok();
 
     let app = control_plane::app::build(control_plane::state::AppState {
         db,
