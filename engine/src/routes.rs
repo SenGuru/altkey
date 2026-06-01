@@ -69,6 +69,9 @@ pub fn build_router() -> Router {
         .route("/admin/detect", post(admin_detect))
         .route("/admin/keys", post(admin_keys))
         .route("/admin/keys/revoke", post(admin_keys_revoke))
+        .route("/admin/transparent/enable", post(admin_transparent_enable))
+        .route("/admin/transparent/disable", post(admin_transparent_disable))
+        .route("/admin/transparent/status", get(admin_transparent_status))
         .layer(cors)
 }
 
@@ -449,6 +452,40 @@ async fn admin_keys_revoke(
     }
     let _ = store::revoke_key(&body.key);
     Json(json!({"ok": true})).into_response()
+}
+
+// ---- /admin/transparent/* --------------------------------------------------
+
+async fn admin_transparent_enable(headers: HeaderMap) -> Response {
+    if let Err(e) = require_admin(&headers) {
+        return (e.0, e.1).into_response();
+    }
+    let app = build_router();
+    match crate::transparent::enable(app).await {
+        Ok(()) => Json(json!({"ok": true, "transparent": true})).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"ok": false, "error": e.to_string(),
+                "hint": "transparent mode needs admin/root for hosts + :443 + trust store"})),
+        )
+            .into_response(),
+    }
+}
+
+async fn admin_transparent_disable(headers: HeaderMap) -> Response {
+    if let Err(e) = require_admin(&headers) {
+        return (e.0, e.1).into_response();
+    }
+    match crate::transparent::disable() {
+        Ok(()) => Json(json!({"ok": true, "transparent": false})).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"ok": false, "error": e.to_string()}))).into_response(),
+    }
+}
+
+async fn admin_transparent_status(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    require_admin(&headers)?;
+    Ok(Json(json!({"transparent": crate::transparent::is_enabled()})))
 }
 
 // Silence unused warnings in builds where a feature isn't exercised.
