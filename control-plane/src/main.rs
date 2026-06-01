@@ -19,6 +19,7 @@ async fn main() -> Result<()> {
 
     let app = control_plane::app::build(control_plane::state::AppState {
         db,
+        polar: control_plane::billing::polar::from_config(&config),
         config,
         email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
         oauth: std::sync::Arc::new(control_plane::auth::oauth::registry_from_env()),

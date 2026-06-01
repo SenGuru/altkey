@@ -33,6 +33,7 @@ async fn state_with(provider: Option<Provider>) -> AppState {
         },
         email: Arc::new(control_plane::auth::email::LoggingEmailSender),
         oauth: Arc::new(OAuthRegistry { providers }),
+        polar: Arc::new(control_plane::billing::polar::FakePolarClient),
     }
 }
 

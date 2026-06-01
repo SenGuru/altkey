@@ -28,6 +28,7 @@ async fn boot() -> (String, sea_orm::DatabaseConnection) {
         },
         email: Arc::new(control_plane::auth::email::LoggingEmailSender),
         oauth: Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
+        polar: Arc::new(control_plane::billing::polar::FakePolarClient),
     };
     let appx = app::build(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

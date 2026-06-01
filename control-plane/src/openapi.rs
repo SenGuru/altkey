@@ -8,7 +8,8 @@ use utoipa::OpenApi;
     info(title = "altkey control plane", version = "0.1.0"),
     tags(
         (name = "system", description = "Service + health"),
-        (name = "auth", description = "Login, sessions, identity")
+        (name = "auth", description = "Login, sessions, identity"),
+        (name = "billing", description = "Subscriptions via Polar")
     )
 )]
 pub struct ApiDoc;

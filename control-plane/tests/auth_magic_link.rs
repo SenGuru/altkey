@@ -35,6 +35,7 @@ async fn magic_link_request_then_consume_issues_session() {
         },
         email: Arc::new(email.clone()),
         oauth: Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
+        polar: Arc::new(control_plane::billing::polar::FakePolarClient),
     };
 
     let _ = request(State(state.clone()), Json(MagicRequest { email: "Sen@Example.com".into() }))

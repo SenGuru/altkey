@@ -26,6 +26,7 @@ async fn boot() -> String {
         config,
         email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
         oauth: std::sync::Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
+        polar: std::sync::Arc::new(control_plane::billing::polar::FakePolarClient),
     });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

@@ -1,6 +1,6 @@
 pub mod plan;
-pub mod polar;   // later task
-pub mod routes;  // later task
+pub mod polar;
+pub mod routes;
 pub mod store;
-pub mod webhook;     // later task
-pub mod webhook_sig; // later task
+pub mod webhook;
+pub mod webhook_sig;
