@@ -9,6 +9,7 @@ mod translate;
 mod providers;
 mod routes;
 mod transparent;
+mod tunnel_cert;
 
 use anyhow::Result;
 use std::net::SocketAddr;
