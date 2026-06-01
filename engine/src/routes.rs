@@ -72,6 +72,9 @@ pub fn build_router() -> Router {
         .route("/admin/transparent/enable", post(admin_transparent_enable))
         .route("/admin/transparent/disable", post(admin_transparent_disable))
         .route("/admin/transparent/status", get(admin_transparent_status))
+        .route("/admin/tunnel/start", post(admin_tunnel_start))
+        .route("/admin/tunnel/stop", post(admin_tunnel_stop))
+        .route("/admin/tunnel/status", get(admin_tunnel_status))
         .layer(cors)
 }
 
@@ -486,6 +489,36 @@ async fn admin_transparent_disable(headers: HeaderMap) -> Response {
 async fn admin_transparent_status(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     require_admin(&headers)?;
     Ok(Json(json!({"transparent": crate::transparent::is_enabled()})))
+}
+
+// ---- /admin/tunnel/* -------------------------------------------------------
+
+async fn admin_tunnel_start(headers: HeaderMap) -> Response {
+    if let Err(e) = require_admin(&headers) {
+        return (e.0, e.1).into_response();
+    }
+    let app = build_router();
+    let relay = config::relay_addr();
+    let handle = config::handle();
+    tokio::spawn(async move {
+        if let Err(e) = crate::tunnel::run(app, relay, handle).await {
+            tracing::warn!("tunnel exited: {e}");
+        }
+    });
+    Json(json!({"ok": true, "starting": true})).into_response()
+}
+
+async fn admin_tunnel_stop(headers: HeaderMap) -> Response {
+    if let Err(e) = require_admin(&headers) {
+        return (e.0, e.1).into_response();
+    }
+    crate::tunnel::TUNNEL_UP.store(false, std::sync::atomic::Ordering::SeqCst);
+    Json(json!({"ok": true, "stopped": true})).into_response()
+}
+
+async fn admin_tunnel_status(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    require_admin(&headers)?;
+    Ok(Json(json!({"tunnel_up": crate::tunnel::is_up(), "handle": config::handle()})))
 }
 
 // Silence unused warnings in builds where a feature isn't exercised.

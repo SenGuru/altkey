@@ -3,8 +3,16 @@
 //! public TLS on it with the handle cert, and serves the existing router.
 use crate::tunnel_cert::{HandleCert, SelfSignedHandleCert};
 use anyhow::{anyhow, Result};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
+
+/// True while the tunnel control connection is up and Ready was confirmed.
+pub static TUNNEL_UP: AtomicBool = AtomicBool::new(false);
+
+pub fn is_up() -> bool {
+    TUNNEL_UP.load(Ordering::SeqCst)
+}
 use tokio_rustls::rustls::{
     crypto::ring as ring_provider,
     pki_types::{CertificateDer, PrivateKeyDer},
@@ -52,6 +60,7 @@ pub async fn run(app: axum::Router, relay_addr: String, handle: String) -> Resul
         RelayMsg::Reject { reason } => return Err(anyhow!("relay rejected: {reason}")),
         other => return Err(anyhow!("unexpected relay reply: {other:?}")),
     }
+    TUNNEL_UP.store(true, Ordering::SeqCst);
     tracing::info!("tunnel up: https://{host}/ via {relay_addr}");
 
     loop {
@@ -67,7 +76,10 @@ pub async fn run(app: axum::Router, relay_addr: String, handle: String) -> Resul
                 });
             }
             Ok(_) => {}
-            Err(e) => return Err(anyhow!("control connection closed: {e}")),
+            Err(e) => {
+                TUNNEL_UP.store(false, Ordering::SeqCst);
+                return Err(anyhow!("control connection closed: {e}"));
+            }
         }
     }
 }

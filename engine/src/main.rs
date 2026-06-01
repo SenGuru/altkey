@@ -42,6 +42,17 @@ async fn main() -> Result<()> {
         }
     }
 
+    if std::env::var("ALTKEY_TUNNEL").as_deref() == Ok("1") {
+        let app = routes::build_router();
+        let relay = config::relay_addr();
+        let handle = config::handle();
+        tokio::spawn(async move {
+            if let Err(e) = tunnel::run(app, relay, handle).await {
+                tracing::warn!("tunnel exited: {e}");
+            }
+        });
+    }
+
     let addr: SocketAddr = "127.0.0.1:8787".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("altkey engine listening on http://{}", addr);
