@@ -14,7 +14,9 @@ use utoipa_axum::routes;
 use utoipa_swagger_ui::SwaggerUi;
 use crate::adapters::routes::{internal_get_adapter, internal_list_adapters};
 
-pub fn build(state: AppState) -> axum::Router {
+/// Extract the OpenApiRouter route chain and split into `(Router<AppState>, OpenApi)`.
+/// Both `build` and `openapi_json` call this so the dumped spec == the served spec.
+fn router_parts(_state: AppState) -> (axum::Router<AppState>, utoipa::openapi::OpenApi) {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(routes::health::health))
         .routes(routes!(routes::me::me))
@@ -61,8 +63,22 @@ pub fn build(state: AppState) -> axum::Router {
         .route("/internal/adapters", get(internal_list_adapters))
         .route("/internal/adapters/:slug", get(internal_get_adapter));
 
+    (router, api)
+}
+
+pub fn build(state: AppState) -> axum::Router {
+    let (router, api) = router_parts(state.clone());
     router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+/// Build the router purely to extract the merged OpenAPI document as pretty JSON.
+/// Used by the `dump_openapi` binary to produce the codegen input for the web client.
+/// State is consumed here (required to produce the router) but the router itself is
+/// discarded — only the OpenApi document is serialised.
+pub fn openapi_json(state: AppState) -> String {
+    let (_router, api) = router_parts(state);
+    serde_json::to_string_pretty(&api).unwrap_or_default()
 }
