@@ -55,6 +55,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "tunnel-proto",
  "url",
  "uuid",
 ]
@@ -65,6 +66,7 @@ version = "0.1.0"
 dependencies = [
  "altkey",
  "anyhow",
+ "axum",
  "parking_lot",
  "rcgen",
  "reqwest",
@@ -2082,6 +2084,7 @@ name = "tunnel-proto"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "rustls",
  "serde",
  "serde_json",
  "tls-parser",
