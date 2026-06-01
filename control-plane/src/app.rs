@@ -12,6 +12,7 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use utoipa_swagger_ui::SwaggerUi;
+use tower_http::services::{ServeDir, ServeFile};
 use crate::adapters::routes::{internal_get_adapter, internal_list_adapters};
 
 /// Extract the OpenApiRouter route chain and split into `(Router<AppState>, OpenApi)`.
@@ -68,8 +69,15 @@ fn router_parts(_state: AppState) -> (axum::Router<AppState>, utoipa::openapi::O
 
 pub fn build(state: AppState) -> axum::Router {
     let (router, api) = router_parts(state.clone());
+    // Serve the built React dashboard for any non-API path, falling back to
+    // index.html so client-side (SPA) routes resolve. API routes above take
+    // precedence; only unmatched paths reach the static files. Dir is configurable
+    // (WEB_DIST) and defaults to the workspace-relative web/dist build output.
+    let dist = std::env::var("WEB_DIST").unwrap_or_else(|_| "web/dist".to_string());
+    let spa = ServeDir::new(&dist).not_found_service(ServeFile::new(format!("{dist}/index.html")));
     router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
+        .fallback_service(spa)
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
