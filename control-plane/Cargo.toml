@@ -26,6 +26,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors"] }
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.1.3"
 utoipa-swagger-ui = { version = "8", features = ["axum"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
