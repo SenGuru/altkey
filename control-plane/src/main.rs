@@ -17,7 +17,11 @@ async fn main() -> Result<()> {
     let db = control_plane::db::connect(&config).await?;
     control_plane::db::run_migrations(&db).await?;
 
-    let app = control_plane::app::build(control_plane::state::AppState { db, config });
+    let app = control_plane::app::build(control_plane::state::AppState {
+        db,
+        config,
+        email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
+    });
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
     tracing::info!("control-plane listening on {}", bind_addr);
     axum::serve(listener, app).await?;

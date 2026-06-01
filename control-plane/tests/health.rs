@@ -15,7 +15,11 @@ async fn boot() -> String {
         internal_service_secret: None,
         bind_addr: "127.0.0.1:0".into(),
     };
-    let appx = app::build(AppState { db, config });
+    let appx = app::build(AppState {
+        db,
+        config,
+        email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
+    });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move { axum::serve(listener, appx).await.unwrap() });
