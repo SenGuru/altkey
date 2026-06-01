@@ -35,6 +35,10 @@ pub fn build(state: AppState) -> axum::Router {
         .routes(routes!(crate::registry::routes::list_keys))
         .routes(routes!(crate::registry::routes::create_key))
         .routes(routes!(crate::registry::routes::delete_key))
+        // Internal validation endpoints — relay + agent-facing
+        .routes(routes!(crate::internal::routes::authorize))
+        .routes(routes!(crate::internal::routes::key_validate))
+        .routes(routes!(crate::internal::routes::heartbeat))
         .split_for_parts();
 
     // OAuth start/callback are dynamic-path (`/auth/{provider}/...`) and not

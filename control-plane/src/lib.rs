@@ -8,6 +8,7 @@ pub mod config;
 pub mod db;
 pub mod entities;
 pub mod error;
+pub mod internal;
 pub mod registry;
 pub mod state;
 pub mod routes;
