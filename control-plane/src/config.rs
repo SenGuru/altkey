@@ -30,7 +30,7 @@ impl Config {
                 .unwrap_or_else(|_| "sqlite://./control-plane.db?mode=rwc".into()),
             public_base_url: std::env::var("PUBLIC_BASE_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:8080".into()),
-            internal_service_secret: std::env::var("INTERNAL_SERVICE_SECRET").ok(),
+            internal_service_secret: std::env::var("INTERNAL_SERVICE_SECRET").ok().filter(|s| !s.is_empty()),
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into()),
             polar_access_token: std::env::var("POLAR_ACCESS_TOKEN").ok(),
             polar_webhook_secret: std::env::var("POLAR_WEBHOOK_SECRET").ok(),

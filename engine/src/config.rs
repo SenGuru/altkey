@@ -61,3 +61,15 @@ pub fn relay_addr() -> String {
 pub fn handle() -> String {
     std::env::var("ALTKEY_HANDLE").unwrap_or_else(|_| "local".into())
 }
+
+/// Control-plane base URL for ak_live_ key validation. When set (together with
+/// `agent_token()`), the engine gates ak_live_ requests on the control plane.
+pub fn control_plane_url() -> Option<String> {
+    std::env::var("CONTROL_PLANE_URL").ok().filter(|s| !s.is_empty())
+}
+
+/// This machine's ak_agent_ token, used to authenticate control-plane validation
+/// calls. Required (with `control_plane_url()`) to enable the control-plane gate.
+pub fn agent_token() -> Option<String> {
+    std::env::var("ALTKEY_AGENT_TOKEN").ok().filter(|s| !s.is_empty())
+}

@@ -80,7 +80,12 @@ pub fn build_router() -> Router {
 
 // ---- auth helper -----------------------------------------------------------
 
-fn auth_key(headers: &HeaderMap) -> Result<String, (StatusCode, Json<Value>)> {
+/// Validate the presented API key. Local-store check first (unchanged historical
+/// behavior); then, when the control plane is configured (`CONTROL_PLANE_URL` +
+/// `ALTKEY_AGENT_TOKEN`), the key must ALSO pass the control-plane gate. When the
+/// control plane is unconfigured the gate is a no-op, so the default path and all
+/// existing tests are unaffected.
+async fn auth_key(headers: &HeaderMap) -> Result<String, (StatusCode, Json<Value>)> {
     let transparent = std::env::var("ALTKEY_TRANSPARENT").as_deref() == Ok("1");
     let from_bearer = headers
         .get(header::AUTHORIZATION)
@@ -102,6 +107,10 @@ fn auth_key(headers: &HeaderMap) -> Result<String, (StatusCode, Json<Value>)> {
     }
     if !store::key_exists(&key) {
         return Err((StatusCode::UNAUTHORIZED, Json(json!({"detail": "invalid api key"}))));
+    }
+    // Control-plane gate: no-op when unconfigured, otherwise must approve the key.
+    if let Err((s, msg)) = auth::control_plane_ok(&key).await {
+        return Err((s, Json(json!({"detail": msg}))));
     }
     Ok(key)
 }
@@ -166,7 +175,7 @@ async fn oauth_callback(Query(p): Query<CallbackParams>) -> Html<String> {
 // ---- /v1/models ------------------------------------------------------------
 
 async fn v1_models(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let key = auth_key(&headers)?;
+    let key = auth_key(&headers).await?;
     let scope = store::key_provider(&key);
     let mut models = providers::list_models();
     if let Some(s) = scope.as_deref() {
@@ -178,7 +187,7 @@ async fn v1_models(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<
 // ---- /v1/chat/completions --------------------------------------------------
 
 async fn v1_chat(headers: HeaderMap, body: Json<Value>) -> Response {
-    let key = match auth_key(&headers) {
+    let key = match auth_key(&headers).await {
         Ok(k) => k,
         Err(e) => return (e.0, e.1).into_response(),
     };
@@ -230,7 +239,7 @@ async fn v1_chat(headers: HeaderMap, body: Json<Value>) -> Response {
 // ---- /v1/messages (Anthropic passthrough) ---------------------------------
 
 async fn v1_messages(headers: HeaderMap, body: Json<Value>) -> Response {
-    let key = match auth_key(&headers) {
+    let key = match auth_key(&headers).await {
         Ok(k) => k,
         Err(e) => return (e.0, e.1).into_response(),
     };
@@ -267,7 +276,7 @@ async fn v1_messages(headers: HeaderMap, body: Json<Value>) -> Response {
 // ---- /v1/responses ---------------------------------------------------------
 
 async fn v1_responses(headers: HeaderMap, body: Json<Value>) -> Response {
-    if let Err(e) = auth_key(&headers) {
+    if let Err(e) = auth_key(&headers).await {
         return (e.0, e.1).into_response();
     }
     match chatgpt::proxy_responses(body.0).await {
@@ -279,7 +288,7 @@ async fn v1_responses(headers: HeaderMap, body: Json<Value>) -> Response {
 // ---- /v1/images/generations -----------------------------------------------
 
 async fn v1_images(headers: HeaderMap, body: Json<Value>) -> Response {
-    if let Err(e) = auth_key(&headers) {
+    if let Err(e) = auth_key(&headers).await {
         return (e.0, e.1).into_response();
     }
     let prompt = body.0.get("prompt").and_then(|x| x.as_str()).unwrap_or("").to_string();

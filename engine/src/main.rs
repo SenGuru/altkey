@@ -4,6 +4,7 @@
 mod config;
 mod store;
 mod auth;
+mod license;
 mod sse;
 mod translate;
 mod providers;

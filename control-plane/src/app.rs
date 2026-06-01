@@ -24,6 +24,21 @@ pub fn build(state: AppState) -> axum::Router {
         .routes(routes!(crate::billing::routes::checkout))
         .routes(routes!(crate::billing::routes::portal))
         .routes(routes!(crate::billing::routes::subscription))
+        // Registry routes — session-gated, mint-once secrets
+        .routes(routes!(crate::registry::routes::list_handles))
+        .routes(routes!(crate::registry::routes::handle_availability))
+        .routes(routes!(crate::registry::routes::create_handle))
+        .routes(routes!(crate::registry::routes::delete_handle))
+        .routes(routes!(crate::registry::routes::list_agents))
+        .routes(routes!(crate::registry::routes::create_agent))
+        .routes(routes!(crate::registry::routes::delete_agent))
+        .routes(routes!(crate::registry::routes::list_keys))
+        .routes(routes!(crate::registry::routes::create_key))
+        .routes(routes!(crate::registry::routes::delete_key))
+        // Internal validation endpoints — relay + agent-facing
+        .routes(routes!(crate::internal::routes::authorize))
+        .routes(routes!(crate::internal::routes::key_validate))
+        .routes(routes!(crate::internal::routes::heartbeat))
         .split_for_parts();
 
     // OAuth start/callback are dynamic-path (`/auth/{provider}/...`) and not
