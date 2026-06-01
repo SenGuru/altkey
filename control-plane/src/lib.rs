@@ -3,3 +3,5 @@
 //! Modules are added in subsequent Foundation tasks (config, db, entities, routes,
 //! app, openapi, error, state).
 pub mod config;
+pub mod db;
+pub mod entities;
