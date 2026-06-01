@@ -20,6 +20,7 @@ use crate::providers::chatgpt;
 use crate::sse;
 use crate::store;
 use crate::{auth, config};
+use crate::usage;
 
 // Same HTML the Python reference serves. Embedded at compile time so the
 // binary is self-contained; falls back to the dashboard.html on the Python
@@ -231,7 +232,41 @@ async fn v1_chat(headers: HeaderMap, body: Json<Value>) -> Response {
         providers::Provider::Chatgpt => chatgpt::openai_completion(&body).await,
     };
     match result {
-        Ok(v) => Json(v).into_response(),
+        Ok(v) => {
+            // Best-effort usage metering — non-blocking push to the in-memory buffer.
+            // TODO: thread real token counts (prompt/completion) from the response body.
+            let total_tokens = v
+                .get("usage")
+                .and_then(|u| u.get("total_tokens"))
+                .and_then(|t| t.as_i64())
+                .unwrap_or(0);
+            let prompt_tokens = v
+                .get("usage")
+                .and_then(|u| u.get("prompt_tokens"))
+                .and_then(|t| t.as_i64())
+                .unwrap_or(0);
+            let completion_tokens = v
+                .get("usage")
+                .and_then(|u| u.get("completion_tokens"))
+                .and_then(|t| t.as_i64())
+                .unwrap_or(0);
+            let provider_name = match prov {
+                providers::Provider::Claude => "claude",
+                providers::Provider::Chatgpt => "chatgpt",
+            };
+            usage::global_record(altkey_api::dto::UsageRecordDto {
+                ts: chrono::Utc::now().to_rfc3339(),
+                provider: provider_name.to_string(),
+                model: model.clone(),
+                prompt_tokens,
+                completion_tokens,
+                total_tokens,
+                tunnel_bytes: 0,
+                tool: None,
+                key_prefix: if key.len() >= 16 { Some(key[..16].to_string()) } else { None },
+            });
+            Json(v).into_response()
+        }
         Err(e) => err502(e.to_string()).into_response(),
     }
 }
