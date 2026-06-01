@@ -1,0 +1,1206 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   C:\Users\gsent\Desktop\altkey\engine\Cargo.toml
+workspace: C:\Users\gsent\Desktop\altkey\Cargo.toml
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running `target\debug\dump_openapi.exe`
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "altkey control plane",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/adapters": {
+      "get": {
+        "tags": [
+          "adapters"
+        ],
+        "summary": "GET /adapters",
+        "description": "Session-gated adapter catalog. Returns metadata rows without manifests.",
+        "operationId": "list_adapters",
+        "responses": {
+          "200": {
+            "description": "Adapter catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdapterView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/agents": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "list_agents",
+        "responses": {
+          "200": {
+            "description": "List agents for the current account"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "create_agent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Agent paired; token returned once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedAgent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "Handle not found or not owned"
+          }
+        }
+      }
+    },
+    "/agents/{id}": {
+      "delete": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "delete_agent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Agent UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent revoked"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "Agent not found or not owned"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Session cleared"
+          }
+        }
+      }
+    },
+    "/auth/magic-link/consume": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "consume",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "description": "The one-time token from the email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Session issued; redirect to dashboard"
+          }
+        }
+      }
+    },
+    "/auth/magic-link/request": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MagicRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Magic link sent if the email is valid"
+          }
+        }
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "checkout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "portal",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          },
+          "404": {
+            "description": "No subscription"
+          }
+        }
+      }
+    },
+    "/billing/subscription": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "subscription",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/handles": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "list_handles",
+        "responses": {
+          "200": {
+            "description": "List handles for the current account"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "create_handle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimHandleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Handle claimed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandleView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or taken handle name"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/handles/availability": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "handle_availability",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Handle name to check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability check result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/handles/{id}": {
+      "delete": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "delete_handle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Handle UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Handle revoked"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "Handle not found or not owned"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Service health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/agent/authorize": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "POST /internal/agent/authorize",
+        "description": "Called by the relay to check whether a given agent_token + handle is allowed.\nRequires the service secret in `x-altkey-service-secret`.",
+        "operationId": "authorize",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized or not"
+          },
+          "401": {
+            "description": "Bad service secret"
+          }
+        }
+      }
+    },
+    "/internal/agent/heartbeat": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "POST /internal/agent/heartbeat",
+        "description": "Best-effort ping: the agent presents its token; last_seen_at is updated.\nUnknown token still returns 200 — don't leak token existence.",
+        "operationId": "heartbeat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/internal/key/validate": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "POST /internal/key/validate",
+        "description": "Called by the agent/engine to check whether an ak_live_ key is valid and the\naccount's subscription is active.",
+        "operationId": "key_validate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyValidateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Key validity + sub status"
+          }
+        }
+      }
+    },
+    "/internal/usage": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "POST /internal/usage",
+        "description": "Agent-token authenticated batch ingest of usage records.\nUnknown token → 401. Skips bad rows but never fails the batch.",
+        "operationId": "ingest_usage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageBatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ingested"
+          },
+          "401": {
+            "description": "Unknown agent token"
+          }
+        }
+      }
+    },
+    "/keys": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "list_keys",
+        "responses": {
+          "200": {
+            "description": "List endpoint keys for the current account (prefix only, never secret)"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "create_key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Key minted; secret returned once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/keys/{id}": {
+      "delete": {
+        "tags": [
+          "registry"
+        ],
+        "operationId": "delete_key",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Key UUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key revoked"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "Key not found or not owned"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "The current account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/usage/records": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "GET /usage/records",
+        "description": "Returns recent raw usage records for the current account, newest-first.\n`limit` query param capped at 200.\nSession-gated; no secrets in the response.",
+        "operationId": "usage_records",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max rows to return (capped at 200)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecordView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/usage/summary": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "GET /usage/summary",
+        "description": "Rebuilds (idempotent) and returns the account's usage rollup rows.\nSession-gated.",
+        "operationId": "usage_summary",
+        "responses": {
+          "200": {
+            "description": "Rollup rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RollupView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/webhooks/polar": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "polar_webhook",
+        "requestBody": {
+          "description": "Raw webhook payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Processed"
+          },
+          "401": {
+            "description": "Bad signature"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdapterView": {
+        "type": "object",
+        "description": "Catalog row (metadata only — no manifest). Served on the session-gated\n`/adapters` dashboard endpoint.",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "version"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "target_tool": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthorizeBody": {
+        "type": "object",
+        "required": [
+          "handle",
+          "agent_token"
+        ],
+        "properties": {
+          "agent_token": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string"
+          }
+        }
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          }
+        }
+      },
+      "ClaimHandleRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": [
+          "handle_id",
+          "name"
+        ],
+        "properties": {
+          "handle_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateKeyRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatedAgent": {
+        "type": "object",
+        "description": "Returned only at creation time — includes the plaintext token (shown ONCE).",
+        "required": [
+          "id",
+          "name",
+          "handle_id",
+          "token"
+        ],
+        "properties": {
+          "handle_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatedKey": {
+        "type": "object",
+        "description": "Returned only at creation time — includes the plaintext secret (shown ONCE).",
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "secret"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        }
+      },
+      "HandleView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "db"
+        ],
+        "properties": {
+          "db": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Heartbeat": {
+        "type": "object",
+        "description": "Small body type for the heartbeat endpoint — agent_token only.",
+        "required": [
+          "agent_token"
+        ],
+        "properties": {
+          "agent_token": {
+            "type": "string"
+          }
+        }
+      },
+      "KeyValidateBody": {
+        "type": "object",
+        "required": [
+          "key",
+          "agent_token"
+        ],
+        "properties": {
+          "agent_token": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "MagicRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "Me": {
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "properties": {
+          "display_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "Plan": {
+        "type": "string",
+        "enum": [
+          "founding",
+          "standard",
+          "pro"
+        ]
+      },
+      "RecordView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "provider",
+          "model",
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens",
+          "tunnel_bytes"
+        ],
+        "properties": {
+          "completion_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string"
+          },
+          "key_prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "tool": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ts": {
+            "type": "string"
+          },
+          "tunnel_bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RollupView": {
+        "type": "object",
+        "required": [
+          "period",
+          "sum_requests",
+          "sum_tokens",
+          "sum_bytes"
+        ],
+        "properties": {
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "period": {
+            "type": "string"
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sum_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sum_requests": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sum_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "tool": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SubscriptionView": {
+        "type": "object",
+        "required": [
+          "status",
+          "active",
+          "is_founding"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "current_period_end": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_founding": {
+            "type": "boolean"
+          },
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "UrlResponse": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "UsageBatchBody": {
+        "type": "object",
+        "description": "Schema-only wrapper for utoipa — see AuthorizeBody note above.",
+        "required": [
+          "agent_token",
+          "records"
+        ],
+        "properties": {
+          "agent_token": {
+            "type": "string"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRecordDtoBody"
+            }
+          }
+        }
+      },
+      "UsageRecordDtoBody": {
+        "type": "object",
+        "required": [
+          "ts",
+          "provider",
+          "model",
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens",
+          "tunnel_bytes"
+        ],
+        "properties": {
+          "completion_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "key_prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "tool": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ts": {
+            "type": "string"
+          },
+          "tunnel_bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "system",
+      "description": "Service + health"
+    },
+    {
+      "name": "auth",
+      "description": "Login, sessions, identity"
+    },
+    {
+      "name": "billing",
+      "description": "Subscriptions via Polar"
+    }
+  ]
+}
