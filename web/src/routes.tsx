@@ -3,12 +3,12 @@ import { useMe } from './lib/queries';
 import { App } from './app';
 import { Login } from './pages/Login';
 import { Billing } from './pages/Billing';
+import { Handles } from './pages/Handles';
+import { Machines } from './pages/Machines';
+import { Keys } from './pages/Keys';
 
-// ─── Placeholder page components (real pages implemented in Tasks 5-6) ────────
+// ─── Placeholder page components (real pages implemented in Tasks 6) ──────────
 function Dashboard() { return <div>Dashboard</div>; }
-function Handles() { return <div>Handles</div>; }
-function Machines() { return <div>Machines</div>; }
-function Keys() { return <div>Keys</div>; }
 function Usage() { return <div>Usage</div>; }
 function Adapters() { return <div>Adapters</div>; }
 

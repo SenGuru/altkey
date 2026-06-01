@@ -3,6 +3,26 @@
 // Import api.ts side-effect to ensure the client is configured before any call.
 import '../lib/api';
 
+// ─── Local interfaces for list endpoints whose OpenAPI spec returns anonymous arrays ─
+// ListAgentsResponse and ListKeysResponse are typed `unknown` in types.gen.ts
+// (the spec uses anonymous array schemas). These interfaces match the actual
+// JSON shape the control-plane returns.
+export interface AgentView {
+  id: string;
+  name: string;
+  token_prefix: string;
+  handle_id: string;
+  status: string;
+}
+
+export interface KeyView {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
 import {
   useQuery,
   useMutation,
@@ -94,24 +114,24 @@ export function useHandles(): UseQueryResult<HandleView[]> {
   });
 }
 
-export function useAgents(): UseQueryResult<unknown[]> {
+export function useAgents(): UseQueryResult<AgentView[]> {
   return useQuery({
     queryKey: QK.agents,
     queryFn: async () => {
       const { data, error } = await listAgents();
       if (error || !data) return [];
-      return data as unknown[];
+      return data as AgentView[];
     },
   });
 }
 
-export function useKeys(): UseQueryResult<unknown[]> {
+export function useKeys(): UseQueryResult<KeyView[]> {
   return useQuery({
     queryKey: QK.keys,
     queryFn: async () => {
       const { data, error } = await listKeys();
       if (error || !data) return [];
-      return data as unknown[];
+      return data as KeyView[];
     },
   });
 }
