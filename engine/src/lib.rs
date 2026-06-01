@@ -11,3 +11,4 @@ pub mod providers;
 pub mod routes;
 pub mod transparent;
 pub mod tunnel_cert;
+pub mod tunnel;

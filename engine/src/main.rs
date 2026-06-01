@@ -10,6 +10,7 @@ mod providers;
 mod routes;
 mod transparent;
 mod tunnel_cert;
+mod tunnel;
 
 use anyhow::Result;
 use std::net::SocketAddr;
