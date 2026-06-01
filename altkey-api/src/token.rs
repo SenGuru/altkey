@@ -61,6 +61,17 @@ pub fn kind_of(token: &str) -> Option<TokenKind> {
     }
 }
 
+use subtle::ConstantTimeEq;
+
+/// Constant-time check that `plaintext` hashes to `stored_hash` (both sha256 hex).
+/// Avoids a timing oracle when validating presented tokens/keys against stored hashes.
+pub fn verify_hash(plaintext: &str, stored_hash: &str) -> bool {
+    let computed = hash(plaintext);
+    let a = computed.as_bytes();
+    let b = stored_hash.as_bytes();
+    a.len() == b.len() && a.ct_eq(b).into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,5 +100,13 @@ mod tests {
         assert_eq!(kind_of("ak_agent_xyz"), Some(TokenKind::Agent));
         assert_eq!(kind_of("ak_live_xyz"), Some(TokenKind::Live));
         assert_eq!(kind_of("nope"), None);
+    }
+
+    #[test]
+    fn verify_hash_matches_only_correct_plaintext() {
+        let t = generate(TokenKind::Live);
+        let h = hash(&t.secret);
+        assert!(verify_hash(&t.secret, &h));
+        assert!(!verify_hash("wrong", &h));
     }
 }
