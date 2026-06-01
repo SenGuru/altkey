@@ -5,6 +5,7 @@
 pub mod config;
 pub mod store;
 pub mod auth;
+pub mod license;
 pub mod sse;
 pub mod translate;
 pub mod providers;
