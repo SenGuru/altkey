@@ -1,4 +1,7 @@
 pub use super::account::Entity as Account;
+pub use super::agent::Entity as Agent;
+pub use super::endpoint_key::Entity as EndpointKey;
+pub use super::handle::Entity as Handle;
 pub use super::identity::Entity as Identity;
 pub use super::magic_link::Entity as MagicLink;
 pub use super::oauth_flow::Entity as OauthFlow;

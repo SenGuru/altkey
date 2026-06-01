@@ -1,4 +1,7 @@
 pub mod account;
+pub mod agent;
+pub mod endpoint_key;
+pub mod handle;
 pub mod identity;
 pub mod magic_link;
 pub mod oauth_flow;
