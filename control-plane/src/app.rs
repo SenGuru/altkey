@@ -20,6 +20,10 @@ pub fn build(state: AppState) -> axum::Router {
         .routes(routes!(routes::me::logout))
         .routes(routes!(magic_link::request))
         .routes(routes!(magic_link::consume))
+        .routes(routes!(crate::billing::webhook::polar_webhook))
+        .routes(routes!(crate::billing::routes::checkout))
+        .routes(routes!(crate::billing::routes::portal))
+        .routes(routes!(crate::billing::routes::subscription))
         .split_for_parts();
 
     // OAuth start/callback are dynamic-path (`/auth/{provider}/...`) and not

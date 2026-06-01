@@ -14,12 +14,19 @@ async fn boot() -> String {
         public_base_url: "http://127.0.0.1".into(),
         internal_service_secret: None,
         bind_addr: "127.0.0.1:0".into(),
+        polar_access_token: None,
+        polar_webhook_secret: None,
+        polar_base_url: "https://api.polar.sh".into(),
+        polar_product_founding: None,
+        polar_product_standard: None,
+        polar_product_pro: None,
     };
     let appx = app::build(AppState {
         db,
         config,
         email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
         oauth: std::sync::Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
+        polar: std::sync::Arc::new(control_plane::billing::polar::FakePolarClient),
     });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

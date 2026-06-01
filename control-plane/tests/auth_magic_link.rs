@@ -26,9 +26,16 @@ async fn magic_link_request_then_consume_issues_session() {
             public_base_url: "http://localhost".into(),
             internal_service_secret: None,
             bind_addr: "127.0.0.1:0".into(),
+            polar_access_token: None,
+            polar_webhook_secret: None,
+            polar_base_url: "https://api.polar.sh".into(),
+            polar_product_founding: None,
+            polar_product_standard: None,
+            polar_product_pro: None,
         },
         email: Arc::new(email.clone()),
         oauth: Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
+        polar: Arc::new(control_plane::billing::polar::FakePolarClient),
     };
 
     let _ = request(State(state.clone()), Json(MagicRequest { email: "Sen@Example.com".into() }))

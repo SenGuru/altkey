@@ -4,6 +4,7 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20260601_000001_create_account;
 mod m20260601_000002_create_auth_tables;
+mod m20260601_000003_create_subscription;
 
 pub struct Migrator;
 
@@ -13,6 +14,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20260601_000001_create_account::Migration),
             Box::new(m20260601_000002_create_auth_tables::Migration),
+            Box::new(m20260601_000003_create_subscription::Migration),
         ]
     }
 }
