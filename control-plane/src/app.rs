@@ -39,6 +39,10 @@ pub fn build(state: AppState) -> axum::Router {
         .routes(routes!(crate::internal::routes::authorize))
         .routes(routes!(crate::internal::routes::key_validate))
         .routes(routes!(crate::internal::routes::heartbeat))
+        .routes(routes!(crate::internal::routes::ingest_usage))
+        // Usage dashboard reads — session-gated
+        .routes(routes!(crate::usage::routes::usage_summary))
+        .routes(routes!(crate::usage::routes::usage_records))
         .split_for_parts();
 
     // OAuth start/callback are dynamic-path (`/auth/{provider}/...`) and not

@@ -177,6 +177,46 @@ pub async fn key_validate(
     }
 }
 
+/// Schema-only wrapper for utoipa — see AuthorizeBody note above.
+#[derive(Deserialize, utoipa::ToSchema)]
+#[allow(dead_code)]
+struct UsageBatchBody {
+    agent_token: String,
+    records: Vec<UsageRecordDtoBody>,
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+#[allow(dead_code)]
+struct UsageRecordDtoBody {
+    ts: String,
+    provider: String,
+    model: String,
+    prompt_tokens: i64,
+    completion_tokens: i64,
+    total_tokens: i64,
+    tunnel_bytes: i64,
+    tool: Option<String>,
+    key_prefix: Option<String>,
+}
+
+/// POST /internal/usage
+///
+/// Agent-token authenticated batch ingest of usage records.
+/// Unknown token → 401. Skips bad rows but never fails the batch.
+#[utoipa::path(post, path = "/internal/usage", tag = "internal",
+    request_body = UsageBatchBody,
+    responses((status = 200, description = "Ingested"), (status = 401, description = "Unknown agent token")))]
+pub async fn ingest_usage(
+    State(state): State<AppState>,
+    Json(batch): Json<altkey_api::dto::UsageBatch>,
+) -> StatusCode {
+    let Some(agent) = crate::internal::auth::agent_for_token(&state, &batch.agent_token).await else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    let _ = crate::usage::store::insert_records(&state.db, agent.account_id, Some(agent.id), &batch.records).await;
+    StatusCode::OK
+}
+
 /// POST /internal/agent/heartbeat
 ///
 /// Best-effort ping: the agent presents its token; last_seen_at is updated.
