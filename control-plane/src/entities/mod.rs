@@ -1,4 +1,5 @@
 pub mod account;
+pub mod adapter;
 pub mod agent;
 pub mod endpoint_key;
 pub mod handle;
@@ -8,3 +9,5 @@ pub mod oauth_flow;
 pub mod prelude;
 pub mod session;
 pub mod subscription;
+pub mod usage_record;
+pub mod usage_rollup;
