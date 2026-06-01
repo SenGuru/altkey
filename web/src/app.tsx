@@ -1,8 +1,13 @@
+import { Outlet } from 'react-router-dom';
+import { Nav } from './components/Nav';
+
 export function App() {
   return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h1>altkey dashboard</h1>
-      <p>Control-plane React dashboard — scaffold placeholder.</p>
+    <div style={{ minHeight: '100vh', fontFamily: 'monospace' }}>
+      <Nav />
+      <main style={{ padding: '2rem' }}>
+        <Outlet />
+      </main>
     </div>
   );
 }
