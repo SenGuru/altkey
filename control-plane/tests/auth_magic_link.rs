@@ -31,7 +31,7 @@ async fn magic_link_request_then_consume_issues_session() {
         oauth: Arc::new(control_plane::auth::oauth::OAuthRegistry::default()),
     };
 
-    request(State(state.clone()), Json(MagicRequest { email: "Sen@Example.com".into() }))
+    let _ = request(State(state.clone()), Json(MagicRequest { email: "Sen@Example.com".into() }))
         .await
         .unwrap();
 
