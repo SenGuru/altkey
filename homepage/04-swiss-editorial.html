@@ -1,0 +1,1189 @@
+<!-- altkey landing — Design 04: Swiss Editorial -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>altkey — Turn the AI subscriptions you already pay for into an API key</title>
+<meta name="description" content="altkey is a reverse proxy that turns your ChatGPT Plus and Claude subscriptions into a single OpenAI-compatible API key. Connect with OAuth, get a key, send requests — billed to your existing subscription." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #FAFAF8;
+    --ink: #111111;
+    --gray: #6B6B66;
+    --line: #D9D9D4;
+    --line-strong: #B8B8B2;
+    --red: #E2231A;
+    --grotesk: "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --gutter: clamp(20px, 5vw, 64px);
+    --maxw: 1280px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--grotesk);
+    font-size: 17px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "tnum" 0;
+  }
+
+  ::selection { background: var(--red); color: #fff; }
+
+  a { color: inherit; text-decoration: none; }
+
+  img, svg { display: block; }
+
+  h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+
+  p { margin: 0; }
+
+  /* ---------- Layout primitives ---------- */
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+
+  .hairline { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+  .section {
+    padding: clamp(56px, 8vw, 112px) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Mono label / eyebrow */
+  .label {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gray);
+  }
+
+  .num {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--red);
+  }
+
+  .section-head {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: clamp(36px, 5vw, 64px);
+  }
+  @media (min-width: 800px) {
+    .section-head {
+      grid-template-columns: 220px 1fr;
+      gap: 0 48px;
+      align-items: start;
+    }
+  }
+  .section-head .meta { display: flex; flex-direction: column; gap: 6px; }
+  .section-head h2 {
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.05;
+    max-width: 16ch;
+  }
+  .section-head .lede {
+    color: var(--gray);
+    max-width: 52ch;
+    margin-top: 18px;
+    font-size: 18px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--grotesk);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    padding: 12px 20px;
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+    background: transparent;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .btn--primary {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+  .btn--primary:hover { background: #c41d15; border-color: #c41d15; }
+  .btn--ghost:hover { background: var(--ink); color: var(--paper); }
+  .btn--lg { padding: 15px 26px; font-size: 16px; }
+  .btn .arrow { transition: transform .15s ease; }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 3px;
+  }
+
+  /* ---------- Nav ---------- */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(250,250,248,0.86);
+    backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .wordmark {
+    font-family: var(--grotesk);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: -0.04em;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 1px;
+  }
+  .wordmark .dot { color: var(--red); }
+  .nav__links {
+    display: none;
+    align-items: center;
+    gap: 32px;
+    font-size: 15px;
+    color: var(--gray);
+  }
+  .nav__links a { position: relative; padding: 4px 0; transition: color .15s ease; }
+  .nav__links a::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 1px; background: var(--ink);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .18s ease;
+  }
+  .nav__links a:hover { color: var(--ink); }
+  .nav__links a:hover::after { transform: scaleX(1); }
+  .nav__right { display: flex; align-items: center; gap: 18px; }
+  .nav__cta { display: none; }
+
+  .nav__toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px; height: 40px;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+    align-items: center;
+  }
+  .nav__toggle span { width: 18px; height: 1.5px; background: var(--ink); transition: transform .2s ease, opacity .2s ease; }
+  .nav__toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .nav__toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .nav__toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  .mobile-menu {
+    display: none;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
+  .mobile-menu.open { display: block; }
+  .mobile-menu nav { display: flex; flex-direction: column; padding: 8px 0 20px; }
+  .mobile-menu a {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 17px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--ink);
+  }
+  .mobile-menu a .num { font-size: 11px; }
+  .mobile-menu .btn { margin-top: 20px; justify-content: center; width: 100%; }
+
+  @media (min-width: 880px) {
+    .nav__links { display: flex; }
+    .nav__cta { display: inline-flex; }
+    .nav__toggle { display: none; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: clamp(48px, 8vw, 96px) 0 clamp(56px, 8vw, 104px); }
+  .hero__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  @media (min-width: 980px) {
+    .hero__grid { grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: end; }
+  }
+  .hero__eyebrow {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px;
+  }
+  .hero__eyebrow .rule { flex: 0 0 40px; height: 1px; background: var(--red); }
+  .hero h1 {
+    font-size: clamp(40px, 7.2vw, 84px);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    max-width: 15ch;
+  }
+  .hero h1 .accent { color: var(--red); }
+  .hero__sub {
+    margin-top: 28px;
+    font-size: clamp(18px, 2.2vw, 22px);
+    line-height: 1.45;
+    color: var(--gray);
+    max-width: 46ch;
+  }
+  .hero__sub strong { color: var(--ink); font-weight: 500; }
+  .hero__cta { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .hero__note {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    color: var(--gray);
+  }
+  .hero__note b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Code card ---------- */
+  .code {
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .code__bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
+  .code__bar .file {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--gray);
+  }
+  .code__tabs { display: flex; gap: 4px; }
+  .code__tab {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--gray);
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .code__tab[aria-selected="true"] { color: var(--ink); border-color: var(--ink); background: var(--paper); }
+  .code__copy {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: transparent;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: var(--gray);
+    transition: all .12s ease;
+  }
+  .code__copy:hover { color: var(--ink); border-color: var(--ink); }
+  .code__copy.copied { color: var(--red); border-color: var(--red); }
+  .code pre {
+    margin: 0;
+    padding: 20px 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.72;
+    overflow-x: auto;
+    tab-size: 2;
+    color: var(--ink);
+  }
+  .code pre code { white-space: pre; }
+  .panel[hidden] { display: none; }
+  .tk-c { color: var(--gray); }            /* comment */
+  .tk-k { color: var(--ink); font-weight: 600; } /* keyword */
+  .tk-s { color: #2a6b2a; }                /* string */
+  .tk-f { color: var(--ink); }             /* func */
+  .tk-r { color: var(--red); font-weight: 600; } /* highlight */
+
+  /* ---------- Providers strip ---------- */
+  .providers {
+    padding: clamp(28px, 4vw, 40px) 0;
+    border-top: 1px solid var(--line);
+  }
+  .providers__inner {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (max-width: 720px) {
+    .providers__inner { grid-template-columns: 1fr; gap: 22px; }
+  }
+  .providers__marks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(28px, 5vw, 64px);
+  }
+  .provider {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--ink);
+  }
+  .provider svg { flex: none; }
+  .provider .pname { font-weight: 600; letter-spacing: -0.02em; font-size: 19px; }
+  .provider .psub { font-size: 13px; color: var(--gray); font-family: var(--mono); letter-spacing: 0.02em; }
+  .provider__soon {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray);
+    border: 1px dashed var(--line-strong);
+    padding: 8px 12px;
+    border-radius: 2px;
+  }
+
+  /* ---------- How it works ---------- */
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+  @media (min-width: 800px) {
+    .steps { grid-template-columns: repeat(3, 1fr); }
+  }
+  .step {
+    padding: 32px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (min-width: 800px) {
+    .step {
+      padding: 36px 32px 40px 0;
+      border-bottom: 0;
+      border-right: 1px solid var(--line);
+    }
+    .step:last-child { border-right: 0; padding-right: 0; }
+    .step:not(:first-child) { padding-left: 32px; }
+  }
+  .step__n {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--red);
+    letter-spacing: 0.08em;
+    margin-bottom: 22px;
+    display: block;
+  }
+  .step h3 { font-size: 22px; letter-spacing: -0.025em; margin-bottom: 12px; }
+  .step p { color: var(--gray); font-size: 16px; max-width: 34ch; }
+  .step code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  /* ---------- Code showcase ---------- */
+  .showcase__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  @media (min-width: 980px) {
+    .showcase__grid { grid-template-columns: 220px 1fr; gap: 48px; align-items: start; }
+  }
+  .showcase__aside .label { display: block; margin-bottom: 18px; }
+  .showcase__aside p { color: var(--gray); font-size: 15px; max-width: 28ch; margin-bottom: 22px; }
+  .showcase__aside dl { margin: 0; border-top: 1px solid var(--line); }
+  .showcase__aside .row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .showcase__aside .row dt { color: var(--gray); letter-spacing: 0.02em; }
+  .showcase__aside .row dd { margin: 0; color: var(--ink); text-align: right; }
+  .showcase__aside .row dd.hot { color: var(--red); }
+
+  /* ---------- Features grid ---------- */
+  .features {
+    display: grid;
+    grid-template-columns: 1fr;
+    border-top: 1px solid var(--line-strong);
+    border-left: 1px solid var(--line);
+  }
+  @media (min-width: 640px) { .features { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .features { grid-template-columns: repeat(3, 1fr); } }
+  .feature {
+    padding: 32px 28px 40px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .feature__n { font-family: var(--mono); font-size: 12px; color: var(--gray); letter-spacing: 0.1em; }
+  .feature__icon { margin: 18px 0 20px; }
+  .feature h3 { font-size: 19px; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .feature p { color: var(--gray); font-size: 15.5px; line-height: 1.5; }
+
+  /* ---------- Pricing ---------- */
+  .pricing__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  @media (min-width: 800px) { .pricing__grid { grid-template-columns: 1fr 1fr; } }
+  .tier {
+    padding: clamp(28px, 4vw, 44px);
+    display: flex;
+    flex-direction: column;
+  }
+  @media (min-width: 800px) { .tier:first-child { border-right: 1px solid var(--line-strong); } }
+  @media (max-width: 799px) { .tier:first-child { border-bottom: 1px solid var(--line-strong); } }
+  .tier--pop { background: #fff; position: relative; }
+  .tier__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tier__name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); }
+  .tier__badge {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #fff; background: var(--red); padding: 4px 9px; border-radius: 2px;
+  }
+  .tier__price { display: flex; align-items: baseline; gap: 8px; margin: 26px 0 6px; }
+  .tier__amount { font-size: clamp(48px, 7vw, 64px); font-weight: 600; letter-spacing: -0.04em; line-height: 1; font-feature-settings: "tnum" 1; }
+  .tier--pop .tier__amount { color: var(--red); }
+  .tier__per { font-family: var(--mono); font-size: 14px; color: var(--gray); }
+  .tier__for { color: var(--gray); font-size: 15px; margin-bottom: 28px; max-width: 36ch; }
+  .tier ul { list-style: none; margin: 0 0 32px; padding: 24px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; flex: 1; }
+  .tier li { display: flex; gap: 12px; font-size: 15.5px; align-items: flex-start; }
+  .tier li svg { flex: none; margin-top: 3px; }
+  .tier .btn { width: 100%; justify-content: center; }
+  .pricing__fine {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--gray);
+    text-align: center;
+  }
+
+  /* ---------- Trust band ---------- */
+  .trust { background: var(--ink); color: var(--paper); border-top: 1px solid var(--ink); }
+  .trust .section-head h2 { color: var(--paper); }
+  .trust .label { color: #a3a39d; }
+  .trust .num { color: var(--red); }
+  .trust__grid {
+    display: grid; grid-template-columns: 1fr; gap: 1px;
+    background: #2a2a28;
+    border: 1px solid #2a2a28;
+  }
+  @media (min-width: 720px) { .trust__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1040px) { .trust__grid { grid-template-columns: repeat(4, 1fr); } }
+  .trust__cell { background: var(--ink); padding: 28px 24px; }
+  .trust__cell h3 { font-size: 17px; color: var(--paper); margin-bottom: 10px; letter-spacing: -0.01em; }
+  .trust__cell p { color: #a3a39d; font-size: 14.5px; line-height: 1.5; }
+  .trust__cell .tick { color: var(--red); font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; display: block; margin-bottom: 16px; }
+
+  /* ---------- FAQ ---------- */
+  .faq__list { border-top: 1px solid var(--line-strong); }
+  .faq__item { border-bottom: 1px solid var(--line); }
+  .faq__item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 26px 0;
+    display: grid;
+    grid-template-columns: 48px 1fr 28px;
+    gap: 16px;
+    align-items: start;
+  }
+  .faq__item summary::-webkit-details-marker { display: none; }
+  .faq__q { font-size: clamp(18px, 2.3vw, 22px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.25; }
+  .faq__qn { font-family: var(--mono); font-size: 12px; color: var(--red); padding-top: 5px; letter-spacing: 0.06em; }
+  .faq__sign { position: relative; width: 16px; height: 16px; margin-top: 6px; justify-self: end; }
+  .faq__sign::before, .faq__sign::after {
+    content: ""; position: absolute; background: var(--ink);
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .faq__sign::before { left: 0; right: 0; top: 7.25px; height: 1.5px; }
+  .faq__sign::after { top: 0; bottom: 0; left: 7.25px; width: 1.5px; }
+  .faq__item[open] .faq__sign::after { transform: scaleY(0); }
+  .faq__a {
+    padding: 0 28px 30px 64px;
+    color: var(--gray);
+    font-size: 16.5px;
+    line-height: 1.55;
+    max-width: 70ch;
+  }
+  .faq__a strong { color: var(--ink); font-weight: 500; }
+  .faq__a code { font-family: var(--mono); font-size: 14px; background: #fff; border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+
+  /* ---------- Final CTA ---------- */
+  .final { text-align: left; }
+  .final__grid { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: end; }
+  @media (min-width: 860px) { .final__grid { grid-template-columns: 1fr auto; } }
+  .final h2 { font-size: clamp(34px, 6vw, 64px); line-height: 0.98; letter-spacing: -0.035em; max-width: 16ch; }
+  .final h2 .accent { color: var(--red); }
+  .final .cta-row { display: flex; flex-wrap: wrap; gap: 14px; }
+
+  /* ---------- Footer ---------- */
+  .footer { border-top: 1px solid var(--line-strong); padding: 56px 0 40px; }
+  .footer__grid {
+    display: grid; grid-template-columns: 1fr; gap: 40px;
+  }
+  @media (min-width: 720px) { .footer__grid { grid-template-columns: 1.4fr 1fr 1fr; } }
+  .footer__brand .wordmark { font-size: 24px; }
+  .footer__brand p { color: var(--gray); font-size: 14.5px; margin-top: 16px; max-width: 34ch; }
+  .footer__col h4 { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); margin-bottom: 18px; font-weight: 500; }
+  .footer__col a { display: block; padding: 6px 0; color: var(--ink); font-size: 15px; width: fit-content; position: relative; }
+  .footer__col a::after { content: ""; position: absolute; left: 0; bottom: 4px; height: 1px; width: 100%; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform .18s ease; }
+  .footer__col a:hover::after { transform: scaleX(1); }
+  .footer__bottom {
+    display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between;
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; color: var(--gray);
+  }
+  .footer__bottom a:hover { color: var(--ink); }
+
+  /* ---------- Scroll reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+    .btn .arrow, .nav__links a::after { transition: none; }
+  }
+
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--ink); color: #fff; padding: 10px 16px; z-index: 100; border-radius: 2px;
+  }
+  .skip:focus { left: 12px; top: 12px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- ====================== NAV ====================== -->
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a class="wordmark" href="#top" aria-label="altkey home">altkey<span class="dot">.</span></a>
+    <nav class="nav__links" aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav__right">
+      <a class="btn btn--primary nav__cta" href="#pricing">Get your key</a>
+      <button class="nav__toggle" id="navToggle" aria-expanded="false" aria-controls="mobileMenu" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="wrap">
+      <nav aria-label="Mobile">
+        <a href="#how"><span>How it works</span><span class="num">01</span></a>
+        <a href="#pricing"><span>Pricing</span><span class="num">04</span></a>
+        <a href="#faq"><span>FAQ</span><span class="num">06</span></a>
+        <a class="btn btn--primary" href="#pricing">Get your key</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<a id="top"></a>
+
+<!-- ====================== HERO ====================== -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero__grid">
+      <div>
+        <div class="hero__eyebrow">
+          <span class="rule" aria-hidden="true"></span>
+          <span class="label">Reverse proxy for AI subscriptions</span>
+        </div>
+        <h1>Turn the AI subscriptions you <span class="accent">already pay for</span> into an API key.</h1>
+        <p class="hero__sub">Connect ChatGPT Plus and Claude with OAuth. altkey hands you one <strong>OpenAI-compatible API key</strong> and routes every request through your own account — billed to the subscription you already have.</p>
+        <div class="hero__cta">
+          <a class="btn btn--primary btn--lg" href="#pricing">Get your key <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn btn--ghost btn--lg" href="#how">See how it works</a>
+        </div>
+        <p class="hero__note"><b>No per-token API rates.</b> &nbsp;OAuth only — no passwords stored. &nbsp;Revoke anytime.</p>
+      </div>
+
+      <!-- Code visual -->
+      <div class="code reveal" id="heroCode">
+        <div class="code__bar">
+          <span class="file">quickstart.py</span>
+          <button class="code__copy" data-copy="hero">Copy</button>
+        </div>
+        <pre><code><span class="tk-k">from</span> openai <span class="tk-k">import</span> OpenAI
+
+client = <span class="tk-f">OpenAI</span>(
+  base_url=<span class="tk-r">"https://api.altkey.dev/v1"</span>,
+  api_key=<span class="tk-s">"ak-live-7f3c9a..."</span>,
+)
+
+resp = client.chat.completions.<span class="tk-f">create</span>(
+  model=<span class="tk-s">"gpt-4o"</span>,   <span class="tk-c"># or claude-3-5-sonnet</span>
+  messages=[{<span class="tk-s">"role"</span>: <span class="tk-s">"user"</span>,
+             <span class="tk-s">"content"</span>: <span class="tk-s">"Ship it."</span>}],
+)
+<span class="tk-c"># → routed through YOUR ChatGPT Plus plan</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== PROVIDERS STRIP ====================== -->
+<section class="providers" aria-label="Supported providers">
+  <div class="wrap">
+    <div class="providers__inner">
+      <span class="label">Works with the plans<br />you already have</span>
+      <div class="providers__marks">
+        <!-- OpenAI -->
+        <span class="provider">
+          <svg width="30" height="30" viewBox="0 0 24 24" role="img" aria-label="OpenAI logo" focusable="false"><title>OpenAI</title>
+            <path fill="#111111" d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A5.99 5.99 0 0 0 10.74 0a6.05 6.05 0 0 0-5.77 4.19 5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .75 7.09 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.2 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.08Zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5ZM3.6 18.1a4.47 4.47 0 0 1-.54-3.01l.14.09 4.78 2.76c.24.14.53.14.77 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.72 22.4a4.5 4.5 0 0 1-6.14-1.65ZM2.34 7.9a4.48 4.48 0 0 1 2.34-1.97v5.68c0 .28.15.54.39.68l5.82 3.36-2.02 1.17a.08.08 0 0 1-.07 0L4 14.04A4.5 4.5 0 0 1 2.34 7.9Zm16.6 3.86-5.84-3.37 2.02-1.16a.07.07 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12v-5.7a.79.79 0 0 0-.4-.68Zm2.01-3.03-.14-.09-4.77-2.78a.78.78 0 0 0-.78 0l-5.84 3.37V6.9a.08.08 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66ZM8.2 12.86 6.18 11.7a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08-4.78 2.76a.79.79 0 0 0-.39.68l-.01 6.72Zm1.1-2.36L11.9 9l2.6 1.5v3l-2.6 1.5-2.6-1.5v-3Z"/>
+          </svg>
+          <span>
+            <span class="pname">OpenAI</span><br />
+            <span class="psub">ChatGPT Plus</span>
+          </span>
+        </span>
+        <!-- Anthropic / Claude -->
+        <span class="provider">
+          <svg width="28" height="28" viewBox="0 0 24 24" role="img" aria-label="Anthropic Claude logo" focusable="false"><title>Anthropic — Claude</title>
+            <path fill="#E2231A" d="m4.7 15.96 4.13-2.32.07-.2-.07-.11h-.2l-.7-.04-2.36-.06-2.05-.09-1.98-.1-.5-.11L0 12.21l.05-.3.42-.29.6.05 1.33.09 2 .14 1.45.08 2.15.23h.34l.05-.14-.12-.09-.09-.08-2.1-1.42-2.27-1.5-1.19-.87-.64-.43-.32-.41-.14-.9.58-.63.78.05.2.06.78.6 1.69 1.3 2.2 1.62.32.27.13-.09.02-.07-.15-.24L8.7 6.45l-1.32-2.28-.59-.94-.15-.57a2.74 2.74 0 0 1-.1-.67l.67-.9L7.6.8l.89.12.38.32.55 1.26 1.9 4.23 1.48 2.88.42.8.23.74.09.23h.15v-.13l.12-1.62.22-1.99.22-2.56.07-.72.36-.86.71-.47.55.27.46.65-.06.43-.27 1.76-.54 2.8-.35 1.88h.2l.24-.24.96-1.27 1.6-2.01.71-.8.83-.88.53-.42h1l.74 1.1-.33 1.13-1.04 1.32-.86 1.12-1.24 1.66-.77 1.34.07.1.18-.01 2.72-.58 1.47-.27 1.76-.3.79.37.09.37-.31.77-1.86.46-2.18.43-3.25.77-.04.03.04.05 1.46.14.63.03h1.53l2.86.21.74.5.45.6-.08.46-1.15.59-1.55-.37-3.62-.86-1.24-.31h-.17v.1l1.03 1.01 1.9 1.71 2.37 2.21.12.55-.3.43-.32-.04-2.07-1.55-.8-.7-1.8-1.52h-.12v.16l.41.61 2.2 3.3.12 1.01-.16.33-.57.2-.62-.12-1.29-1.8-1.32-2.03-1.07-1.82-.13.08-.63 6.76-.3.34-.67.26-.57-.43-.3-.7.3-1.37.36-1.78.29-1.42.26-1.76.16-.58-.01-.04-.13.02-1.32 1.81-2 2.71-1.59 1.7-.38.15-.66-.34.06-.6.37-.55 2.2-2.8 1.33-1.73.86-1-.01-.15h-.05L4.1 18.39l-1.21.16-.52-.49.06-.8.25-.26 2.06-1.42z"/>
+          </svg>
+          <span>
+            <span class="pname">Claude</span><br />
+            <span class="psub">Anthropic · Pro</span>
+          </span>
+        </span>
+        <span class="provider__soon">More providers — coming soon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== HOW IT WORKS ====================== -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 01</span>
+        <span class="label">How it works</span>
+      </div>
+      <div>
+        <h2>Three steps from subscription to endpoint.</h2>
+        <p class="lede">No API billing to set up, no new credit card, no scraping. You authorize once and altkey takes care of the rest.</p>
+      </div>
+    </div>
+
+    <div class="steps reveal">
+      <div class="step">
+        <span class="step__n">STEP 01</span>
+        <h3>Connect your account</h3>
+        <p>Log in with OAuth to ChatGPT, Claude, or both. altkey never sees or stores your password — only a revocable token.</p>
+      </div>
+      <div class="step">
+        <span class="step__n">STEP 02</span>
+        <h3>Get one API key</h3>
+        <p>altkey issues a single <code>ak-…</code> key and an OpenAI-compatible endpoint at <code>api.altkey.dev/v1</code>.</p>
+      </div>
+      <div class="step">
+        <span class="step__n">STEP 03</span>
+        <h3>Send requests</h3>
+        <p>Point any OpenAI SDK at altkey. Requests are proxied through your account and billed to your existing subscription.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== CODE SHOWCASE ====================== -->
+<section class="section" id="code">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 02</span>
+        <span class="label">Drop-in</span>
+      </div>
+      <div>
+        <h2>Change one line. Keep your stack.</h2>
+        <p class="lede">altkey speaks the OpenAI Chat Completions API. Swap the <code style="font-family:var(--mono);font-size:15px">base_url</code> and key — everything else stays exactly as you wrote it.</p>
+      </div>
+    </div>
+
+    <div class="showcase__grid reveal">
+      <aside class="showcase__aside">
+        <span class="label">Connection</span>
+        <p>One endpoint serves both providers. Pick the model; altkey routes to the right connected account.</p>
+        <dl>
+          <div class="row"><dt>endpoint</dt><dd>api.altkey.dev/v1</dd></div>
+          <div class="row"><dt>protocol</dt><dd>OpenAI-compatible</dd></div>
+          <div class="row"><dt>auth</dt><dd>Bearer ak-…</dd></div>
+          <div class="row"><dt>billed to</dt><dd class="hot">your plan</dd></div>
+        </dl>
+      </aside>
+
+      <div class="code">
+        <div class="code__bar">
+          <div class="code__tabs" role="tablist" aria-label="Code language">
+            <button class="code__tab" role="tab" id="tab-py" aria-selected="true" aria-controls="panel-py" data-tab="py">Python</button>
+            <button class="code__tab" role="tab" id="tab-curl" aria-selected="false" aria-controls="panel-curl" data-tab="curl">curl</button>
+          </div>
+          <button class="code__copy" data-copy="showcase">Copy</button>
+        </div>
+
+        <div class="panel" id="panel-py" role="tabpanel" aria-labelledby="tab-py">
+<pre><code><span class="tk-c"># pip install openai</span>
+<span class="tk-k">from</span> openai <span class="tk-k">import</span> OpenAI
+
+client = <span class="tk-f">OpenAI</span>(
+    base_url=<span class="tk-r">"https://api.altkey.dev/v1"</span>,
+    api_key=<span class="tk-s">"ak-live-7f3c9a4e21b0d8c5"</span>,
+)
+
+response = client.chat.completions.<span class="tk-f">create</span>(
+    model=<span class="tk-s">"gpt-4o"</span>,
+    messages=[
+        {<span class="tk-s">"role"</span>: <span class="tk-s">"system"</span>, <span class="tk-s">"content"</span>: <span class="tk-s">"You are concise."</span>},
+        {<span class="tk-s">"role"</span>: <span class="tk-s">"user"</span>, <span class="tk-s">"content"</span>: <span class="tk-s">"Summarize altkey in one line."</span>},
+    ],
+)
+
+<span class="tk-f">print</span>(response.choices[<span class="tk-r">0</span>].message.content)
+<span class="tk-c"># Billed to your ChatGPT Plus subscription — not API rates.</span></code></pre>
+        </div>
+
+        <div class="panel" id="panel-curl" role="tabpanel" aria-labelledby="tab-curl" hidden>
+<pre><code><span class="tk-f">curl</span> https://api.altkey.dev/v1/chat/completions \
+  -H <span class="tk-s">"Authorization: Bearer ak-live-7f3c9a4e21b0d8c5"</span> \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -d <span class="tk-s">'{
+    "model": "claude-3-5-sonnet",
+    "messages": [
+      { "role": "user", "content": "Ping altkey." }
+    ]
+  }'</span>
+
+<span class="tk-c"># Same key, both providers. Switch "model" to route.</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FEATURES ====================== -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 03</span>
+        <span class="label">Features</span>
+      </div>
+      <div>
+        <h2>Built to disappear into your code.</h2>
+        <p class="lede">Everything you need to use the plans you pay for, programmatically — and nothing you don't.</p>
+      </div>
+    </div>
+
+    <div class="features reveal">
+      <div class="feature">
+        <span class="feature__n">01</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="1.5"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>
+        </div>
+        <h3>OpenAI-compatible drop-in</h3>
+        <p>Works with the OpenAI SDK and anything that speaks Chat Completions. Change the base URL — done.</p>
+      </div>
+      <div class="feature">
+        <span class="feature__n">02</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.5"><rect x="4" y="10" width="16" height="11" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        </div>
+        <h3>OAuth-only, no passwords</h3>
+        <p>You authorize with the provider's own login. altkey stores a revocable token — never your credentials.</p>
+      </div>
+      <div class="feature">
+        <span class="feature__n">03</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3>24/7 VPS uptime</h3>
+        <p>Hosted on dedicated VPS infrastructure that stays online around the clock — not a laptop under a desk.</p>
+      </div>
+      <div class="feature">
+        <span class="feature__n">04</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="1.5"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 12l5-3"/></svg>
+        </div>
+        <h3>Use your own limits</h3>
+        <p>Requests draw from the subscription you already pay for — no second meter, no surprise per-token bill.</p>
+      </div>
+      <div class="feature">
+        <span class="feature__n">05</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        </div>
+        <h3>One endpoint, both providers</h3>
+        <p>A single key reaches ChatGPT and Claude. Switch the <code style="font-family:var(--mono);font-size:13px">model</code> field to route between them.</p>
+      </div>
+      <div class="feature">
+        <span class="feature__n">06</span>
+        <div class="feature__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18M8 14l2 2 4-4"/></svg>
+        </div>
+        <h3>Usage dashboard</h3>
+        <p>See every request, model, and connected account in one place — so you always know where your usage goes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== PRICING ====================== -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 04</span>
+        <span class="label">Pricing</span>
+      </div>
+      <div>
+        <h2>Flat monthly. You already pay the providers.</h2>
+        <p class="lede">altkey's fee covers the proxy, the uptime, and the dashboard. Token usage stays on your own ChatGPT and Claude subscriptions.</p>
+      </div>
+    </div>
+
+    <div class="pricing__grid reveal">
+      <!-- Starter -->
+      <div class="tier">
+        <div class="tier__top">
+          <span class="tier__name">Starter</span>
+        </div>
+        <div class="tier__price">
+          <span class="tier__amount">$5</span>
+          <span class="tier__per">/ month</span>
+        </div>
+        <p class="tier__for">For people on the $20 Claude Pro and/or ChatGPT Plus plan who want a key.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Connect one or both providers</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> One API key, OpenAI-compatible</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> 24/7 VPS uptime</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Usage dashboard</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Revoke access anytime</li>
+        </ul>
+        <a class="btn btn--ghost btn--lg" href="#">Start for $5</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="tier tier--pop">
+        <div class="tier__top">
+          <span class="tier__name">Pro</span>
+          <span class="tier__badge">Most popular</span>
+        </div>
+        <div class="tier__price">
+          <span class="tier__amount">$25</span>
+          <span class="tier__per">/ month</span>
+        </div>
+        <p class="tier__for">For power users running real workloads who need higher limits and headroom.</p>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Everything in Starter</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Higher request limits</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Priority routing &amp; throughput</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Multiple API keys</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2231A" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg> Priority support</li>
+        </ul>
+        <a class="btn btn--primary btn--lg" href="#">Get your key</a>
+      </div>
+    </div>
+    <p class="pricing__fine">Prices in USD. altkey's fee is separate from — and on top of — your ChatGPT Plus / Claude Pro subscription.</p>
+  </div>
+</section>
+
+<!-- ====================== TRUST BAND ====================== -->
+<section class="section trust" id="security">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 05</span>
+        <span class="label">Security</span>
+      </div>
+      <div>
+        <h2>Your subscriptions stay yours.</h2>
+        <p class="lede" style="color:#a3a39d">altkey is a proxy, not a landlord. You grant access on your terms and pull it back the moment you want.</p>
+      </div>
+    </div>
+
+    <div class="trust__grid reveal">
+      <div class="trust__cell">
+        <span class="tick">OAUTH</span>
+        <h3>Login, not passwords</h3>
+        <p>You authenticate through the provider's own OAuth flow. altkey never sees your password.</p>
+      </div>
+      <div class="trust__cell">
+        <span class="tick">NO STORAGE</span>
+        <h3>No credentials stored</h3>
+        <p>We hold a scoped, revocable token — never your login details, never plaintext secrets.</p>
+      </div>
+      <div class="trust__cell">
+        <span class="tick">NO SCRAPING</span>
+        <h3>Official channels only</h3>
+        <p>Requests go through authorized account access. No browser scraping, no fragile hacks.</p>
+      </div>
+      <div class="trust__cell">
+        <span class="tick">REVOKE</span>
+        <h3>Off in one click</h3>
+        <p>Disconnect a provider or revoke the token anytime, from altkey or from the provider directly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FAQ ====================== -->
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="meta">
+        <span class="num">/ 06</span>
+        <span class="label">FAQ</span>
+      </div>
+      <div>
+        <h2>Honest answers.</h2>
+        <p class="lede">The questions developers actually ask before they connect an account.</p>
+      </div>
+    </div>
+
+    <div class="faq__list reveal">
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q1</span>
+          <span class="faq__q">How is it billed?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p>Two separate things. You pay altkey a flat monthly fee — <strong>$5 Starter or $25 Pro</strong> — for the proxy, uptime, and dashboard. The actual model usage is drawn from the ChatGPT Plus or Claude subscription you already pay the provider for. There are <strong>no per-token API charges</strong> from altkey.</p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q2</span>
+          <span class="faq__q">Which providers are supported?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p>Today: <strong>OpenAI (ChatGPT)</strong> and <strong>Anthropic (Claude)</strong>. Connect one or both — a single altkey key reaches them both, and you choose the provider per request via the <code>model</code> field. More providers are coming soon.</p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q3</span>
+          <span class="faq__q">Is my login safe? Do you store my password?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p><strong>OAuth only.</strong> You log in through the provider's official authorization screen, and altkey receives a scoped, revocable token — never your password. We don't store credentials and we don't scrape your account.</p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q4</span>
+          <span class="faq__q">Can I revoke access?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p>Anytime. Disconnect a provider from your altkey dashboard, or revoke the token directly in your OpenAI or Anthropic account settings. Access stops immediately — your subscriptions stay yours.</p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q5</span>
+          <span class="faq__q">How is this different from the official API?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p>The official OpenAI and Anthropic APIs bill you <strong>per token</strong>, separately from your chat subscription. altkey lets you make programmatic calls that run on the <strong>$20/mo subscription you already have</strong> — so you're not paying twice. It's a convenience proxy for personal use, subject to each provider's own limits and terms.</p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary>
+          <span class="faq__qn">Q6</span>
+          <span class="faq__q">Is there a free trial?</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a">
+          <p>There's no free tier yet — Starter begins at <strong>$5/month</strong>, which is intentionally low so you can try altkey against a real workload without committing much. You can cancel anytime and revoke connected accounts on the way out.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FINAL CTA ====================== -->
+<section class="section final" id="get">
+  <div class="wrap">
+    <div class="final__grid reveal">
+      <h2>Get a key that runs on the plan you <span class="accent">already pay for.</span></h2>
+      <div class="cta-row">
+        <a class="btn btn--primary btn--lg" href="#pricing">Start for $5 <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn--ghost btn--lg" href="#how">Connect an account</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ====================== FOOTER ====================== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a class="wordmark" href="#top" aria-label="altkey home">altkey<span class="dot">.</span></a>
+        <p>Turn the AI subscriptions you already pay for into one OpenAI-compatible API key.</p>
+      </div>
+      <div class="footer__col">
+        <h4>Product</h4>
+        <a href="#how">How it works</a>
+        <a href="#code">Drop-in code</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <div class="footer__col">
+        <h4>Trust</h4>
+        <a href="#security">Security</a>
+        <a href="#faq">FAQ</a>
+        <a href="#">Status</a>
+        <a href="#">Terms &amp; privacy</a>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 altkey. All rights reserved.</span>
+      <span>Not affiliated with OpenAI or Anthropic. Use subject to each provider's terms.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---- Mobile nav toggle ---- */
+  var toggle = document.getElementById("navToggle");
+  var menu = document.getElementById("mobileMenu");
+  if (toggle && menu) {
+    toggle.addEventListener("click", function () {
+      var open = menu.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () {
+        menu.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  /* ---- Code tabs (showcase) ---- */
+  var tabs = document.querySelectorAll(".code__tab");
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.setAttribute("aria-selected", "false"); });
+      tab.setAttribute("aria-selected", "true");
+      var key = tab.getAttribute("data-tab");
+      document.getElementById("panel-py").hidden = key !== "py";
+      document.getElementById("panel-curl").hidden = key !== "curl";
+    });
+  });
+
+  /* ---- Copy to clipboard ---- */
+  function plainText(el) {
+    return el ? el.innerText.replace(/ /g, " ") : "";
+  }
+  document.querySelectorAll(".code__copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var which = btn.getAttribute("data-copy");
+      var src;
+      if (which === "hero") {
+        src = btn.closest(".code").querySelector("pre");
+      } else {
+        var active = document.querySelector(".code__tab[aria-selected='true']");
+        var key = active ? active.getAttribute("data-tab") : "py";
+        src = document.getElementById("panel-" + key).querySelector("pre");
+      }
+      var text = plainText(src);
+      var done = function () {
+        var orig = "Copy";
+        btn.textContent = "Copied";
+        btn.classList.add("copied");
+        setTimeout(function () { btn.textContent = orig; btn.classList.remove("copied"); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); done();
+      }
+    });
+  });
+
+  /* ---- Scroll reveal ---- */
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    reveals.forEach(function (el) { io.observe(el); });
+  } else {
+    reveals.forEach(function (el) { el.classList.add("in"); });
+  }
+})();
+</script>
+</body>
+</html>

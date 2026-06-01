@@ -1,0 +1,956 @@
+<!-- altkey landing — Design 07: Soft Clay -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>altkey — Turn the AI subscriptions you already pay for into an API key</title>
+<meta name="description" content="altkey turns your ChatGPT Plus and Claude Pro subscriptions into a single API key on an OpenAI-compatible endpoint. OAuth-only, no scraping, revoke anytime." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ECE9F7;
+    --bg-2: #E6E1F3;
+    --surface: #F3F0FB;
+    --slate: #2E2A4A;
+    --slate-soft: #5A5478;
+    --blueberry: #6C5CE7;
+    --blueberry-d: #5A4BD1;
+    --bubblegum: #FF6BAA;
+    --mint: #34D399;
+    --butter: #FBBF24;
+    --white: #FBFAFF;
+
+    /* clay shadows: light highlight top-left + soft dark bottom-right */
+    --clay-shadow:
+      -8px -8px 18px rgba(255,255,255,0.85),
+      10px 12px 24px rgba(90,70,180,0.22);
+    --clay-shadow-sm:
+      -5px -5px 12px rgba(255,255,255,0.8),
+      6px 8px 16px rgba(90,70,180,0.20);
+    --clay-inset:
+      inset -5px -5px 11px rgba(255,255,255,0.7),
+      inset 6px 6px 14px rgba(90,70,180,0.22);
+    --clay-pressed:
+      inset 6px 6px 14px rgba(90,70,180,0.30),
+      inset -4px -4px 10px rgba(255,255,255,0.55);
+
+    --radius: 34px;
+    --radius-sm: 22px;
+    --maxw: 1140px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(1100px 700px at 12% -8%, rgba(108,92,231,0.14), transparent 60%),
+      radial-gradient(900px 600px at 98% 4%, rgba(255,107,170,0.13), transparent 55%),
+      radial-gradient(800px 600px at 60% 110%, rgba(52,211,153,0.10), transparent 60%);
+    color: var(--slate);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  h1, h2, h3 { line-height: 1.12; letter-spacing: -0.02em; font-weight: 800; }
+  h2 { font-size: clamp(1.9rem, 4vw, 2.8rem); }
+
+  .eyebrow {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blueberry-d);
+    background: var(--surface);
+    padding: 8px 16px;
+    border-radius: 100px;
+    box-shadow: var(--clay-shadow-sm);
+    margin-bottom: 18px;
+  }
+
+  .section { padding: 92px 0; position: relative; }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 56px; }
+  .section-head p { color: var(--slate-soft); font-size: 1.08rem; margin-top: 14px; }
+
+  /* ===== Buttons ===== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: inherit; font-weight: 700; font-size: 1rem;
+    cursor: pointer; border: none;
+    padding: 15px 28px; border-radius: 100px;
+    transition: transform .14s ease, box-shadow .14s ease, background .2s ease;
+    user-select: none;
+  }
+  .btn:focus-visible { outline: 3px solid var(--blueberry); outline-offset: 3px; }
+
+  .btn-primary {
+    background: linear-gradient(145deg, #7d6df0, #6049d6);
+    color: #fff;
+    box-shadow:
+      -6px -6px 14px rgba(255,255,255,0.45),
+      8px 10px 22px rgba(90,70,180,0.40),
+      inset -3px -3px 8px rgba(70,52,160,0.55),
+      inset 3px 3px 8px rgba(180,170,255,0.55);
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset 5px 5px 12px rgba(60,44,140,0.7),
+      inset -4px -4px 10px rgba(150,138,240,0.5);
+  }
+
+  .btn-soft {
+    background: var(--surface);
+    color: var(--slate);
+    box-shadow: var(--clay-shadow-sm);
+  }
+  .btn-soft:hover { transform: translateY(-2px); }
+  .btn-soft:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+
+  .btn-pink {
+    background: linear-gradient(145deg, #ff7fb6, #f0539a);
+    color: #fff;
+    box-shadow:
+      -6px -6px 14px rgba(255,255,255,0.45),
+      8px 10px 22px rgba(200,60,120,0.34),
+      inset -3px -3px 8px rgba(190,40,100,0.5),
+      inset 3px 3px 8px rgba(255,190,215,0.6);
+  }
+  .btn-pink:hover { transform: translateY(-2px); }
+  .btn-pink:active { transform: translateY(1px); box-shadow: inset 5px 5px 12px rgba(180,40,95,0.65), inset -4px -4px 10px rgba(255,180,210,0.5); }
+
+  /* ===== Nav ===== */
+  header.nav {
+    position: sticky; top: 0; z-index: 100;
+    padding: 14px 0;
+    transition: padding .2s ease;
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(243,240,251,0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 26px;
+    padding: 12px 14px 12px 22px;
+    box-shadow: var(--clay-shadow-sm);
+  }
+  .wordmark {
+    display: flex; align-items: center; gap: 11px;
+    font-weight: 800; font-size: 1.35rem; letter-spacing: -0.03em;
+  }
+  .wordmark .keycap {
+    width: 34px; height: 34px; border-radius: 12px;
+    background: linear-gradient(145deg, #7d6df0, #5a4bd1);
+    display: grid; place-items: center;
+    color: #fff; font-size: 0.9rem; font-weight: 800;
+    box-shadow:
+      -3px -3px 7px rgba(255,255,255,0.4),
+      4px 5px 11px rgba(90,70,180,0.4),
+      inset -2px -2px 5px rgba(60,44,140,0.6),
+      inset 2px 2px 5px rgba(170,160,250,0.6);
+  }
+  .nav-links { display: flex; align-items: center; gap: 6px; }
+  .nav-links a.link {
+    padding: 10px 16px; border-radius: 100px; font-weight: 600;
+    color: var(--slate-soft); transition: color .2s, background .2s;
+  }
+  .nav-links a.link:hover { color: var(--slate); background: rgba(108,92,231,0.08); }
+  .nav-links a.link:focus-visible { outline: 3px solid var(--blueberry); outline-offset: 2px; }
+  .nav-cta { margin-left: 8px; }
+
+  .nav-toggle {
+    display: none; background: var(--surface); border: none; cursor: pointer;
+    width: 46px; height: 46px; border-radius: 16px;
+    box-shadow: var(--clay-shadow-sm);
+    align-items: center; justify-content: center; flex-direction: column; gap: 5px;
+  }
+  .nav-toggle span { display: block; width: 20px; height: 2.5px; background: var(--slate); border-radius: 4px; transition: .25s; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+  /* ===== Hero ===== */
+  .hero { padding: 70px 0 60px; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;
+  }
+  .hero h1 { font-size: clamp(2.4rem, 5.4vw, 4rem); }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--blueberry), var(--bubblegum));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.sub {
+    font-size: 1.18rem; color: var(--slate-soft); margin: 22px 0 32px; max-width: 540px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  .hero-trust {
+    display: flex; gap: 18px; flex-wrap: wrap; margin-top: 26px;
+    font-size: 0.92rem; color: var(--slate-soft); font-weight: 600;
+  }
+  .hero-trust span { display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: var(--clay-shadow-sm); }
+
+  /* Hero visual: clay key + connect card */
+  .hero-visual { position: relative; display: grid; place-items: center; min-height: 380px; }
+  .clay-blob {
+    position: absolute; border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
+    filter: blur(2px); opacity: .8; z-index: 0;
+  }
+  .blob-1 { width: 240px; height: 240px; background: radial-gradient(circle at 35% 30%, #ffa6cd, #ff6baa); top: -10px; right: 10px; box-shadow: var(--clay-shadow); }
+  .blob-2 { width: 180px; height: 180px; background: radial-gradient(circle at 35% 30%, #7ee6c0, #34d399); bottom: 0; left: 0; box-shadow: var(--clay-shadow); }
+
+  .key-card {
+    position: relative; z-index: 2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 100%; max-width: 380px;
+    box-shadow: var(--clay-shadow);
+  }
+  .key-card .endpoint-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--slate-soft); }
+  .clay-key {
+    display: flex; align-items: center; gap: 16px;
+    background: linear-gradient(145deg, #f6f3fe, #e7e2f6);
+    border-radius: var(--radius-sm);
+    padding: 18px; margin: 14px 0 18px;
+    box-shadow: var(--clay-inset);
+  }
+  .clay-key .ring {
+    width: 54px; height: 54px; flex-shrink: 0; border-radius: 50%;
+    background: linear-gradient(145deg, #ffd766, #f5a623);
+    display: grid; place-items: center;
+    box-shadow:
+      -3px -3px 8px rgba(255,255,255,0.5),
+      5px 6px 12px rgba(180,120,20,0.35),
+      inset -2px -2px 6px rgba(200,140,20,0.5),
+      inset 2px 2px 6px rgba(255,235,170,0.8);
+  }
+  .clay-key .keytext { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.95rem; color: var(--slate); word-break: break-all; }
+  .clay-key .keytext small { color: var(--slate-soft); display: block; font-size: 0.72rem; margin-bottom: 3px; font-family: 'Plus Jakarta Sans'; letter-spacing: .04em; text-transform: uppercase; }
+
+  .conn-row { display: flex; gap: 12px; }
+  .conn-chip {
+    flex: 1; display: flex; align-items: center; gap: 9px; justify-content: center;
+    background: var(--white); border-radius: var(--radius-sm); padding: 13px 10px;
+    font-weight: 700; font-size: 0.86rem;
+    box-shadow: var(--clay-shadow-sm);
+  }
+  .conn-chip .status { width: 9px; height: 9px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 3px rgba(52,211,153,0.25); }
+
+  /* ===== Providers strip ===== */
+  .providers { padding: 46px 0; }
+  .providers-inner {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--clay-shadow);
+    padding: 30px 36px;
+    display: flex; align-items: center; justify-content: center; gap: 40px; flex-wrap: wrap;
+  }
+  .providers-inner .plabel { font-weight: 700; color: var(--slate-soft); font-size: 0.95rem; }
+  .pmark { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 1.15rem; }
+  .pmark .ico {
+    width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center;
+    background: var(--white); box-shadow: var(--clay-shadow-sm);
+  }
+  .pmark.coming { color: var(--slate-soft); font-weight: 700; font-size: 0.95rem; }
+
+  /* ===== How it works ===== */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .step {
+    background: var(--surface); border-radius: var(--radius); padding: 32px 28px;
+    box-shadow: var(--clay-shadow); position: relative;
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .step:hover { transform: translateY(-7px); }
+  .step .num {
+    width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center;
+    font-weight: 800; font-size: 1.4rem; color: #fff; margin-bottom: 20px;
+    box-shadow:
+      -3px -3px 8px rgba(255,255,255,0.4),
+      5px 6px 13px rgba(90,70,180,0.32),
+      inset -2px -2px 6px rgba(0,0,0,0.18),
+      inset 2px 2px 6px rgba(255,255,255,0.3);
+  }
+  .step:nth-child(1) .num { background: linear-gradient(145deg, #7d6df0, #5a4bd1); }
+  .step:nth-child(2) .num { background: linear-gradient(145deg, #ff7fb6, #f0539a); }
+  .step:nth-child(3) .num { background: linear-gradient(145deg, #4fe0ac, #2bbf8a); }
+  .step h3 { font-size: 1.25rem; margin-bottom: 8px; }
+  .step p { color: var(--slate-soft); font-size: 0.98rem; }
+
+  /* ===== Code showcase ===== */
+  .code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+  .code-card {
+    background: #2b2840; border-radius: var(--radius); overflow: hidden;
+    box-shadow: var(--clay-shadow);
+  }
+  .code-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; background: #34304d;
+  }
+  .code-top .dots { display: flex; gap: 7px; }
+  .code-top .dots i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .code-top .dots i:nth-child(1){ background:#ff6b6b; } .code-top .dots i:nth-child(2){ background:#fbbf24; } .code-top .dots i:nth-child(3){ background:#34d399; }
+  .code-top .fname { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #b9b3d6; }
+  .copy-btn {
+    background: rgba(255,255,255,0.08); color: #d8d3f0; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 600; font-size: 0.78rem; padding: 7px 13px; border-radius: 100px;
+    transition: background .2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.16); }
+  .copy-btn:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+  .copy-btn.copied { background: var(--mint); color: #07301f; }
+  pre {
+    margin: 0; padding: 22px; overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.86rem; line-height: 1.75; color: #e8e5f7;
+  }
+  .tok-kw { color: #ff8fc5; } .tok-str { color: #8ce8c0; } .tok-fn { color: #b3a4ff; }
+  .tok-com { color: #7d779b; font-style: italic; } .tok-num { color: #fbbf24; } .tok-var { color: #e8e5f7; }
+
+  /* ===== Features ===== */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .feature {
+    background: var(--surface); border-radius: var(--radius); padding: 30px 26px;
+    box-shadow: var(--clay-shadow); transition: transform .25s ease;
+  }
+  .feature:hover { transform: translateY(-7px); }
+  .feature .ficon {
+    width: 60px; height: 60px; border-radius: 20px; display: grid; place-items: center;
+    margin-bottom: 18px; box-shadow: var(--clay-shadow-sm); background: var(--white);
+  }
+  .feature h3 { font-size: 1.18rem; margin-bottom: 8px; }
+  .feature p { color: var(--slate-soft); font-size: 0.96rem; }
+
+  /* ===== Pricing ===== */
+  .pricing { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; max-width: 820px; margin: 0 auto; }
+  .price-card {
+    background: var(--surface); border-radius: var(--radius); padding: 38px 34px;
+    box-shadow: var(--clay-shadow); position: relative; transition: transform .25s ease;
+  }
+  .price-card:hover { transform: translateY(-6px); }
+  .price-card.popular {
+    background: linear-gradient(160deg, #f4f1fd, #ebe6f9);
+    box-shadow:
+      -8px -8px 18px rgba(255,255,255,0.85),
+      10px 14px 28px rgba(90,70,180,0.28),
+      0 0 0 3px rgba(108,92,231,0.35);
+  }
+  .badge-pop {
+    position: absolute; top: -15px; right: 28px;
+    background: linear-gradient(145deg, #ff7fb6, #f0539a); color: #fff;
+    font-weight: 700; font-size: 0.78rem; letter-spacing: .04em;
+    padding: 8px 16px; border-radius: 100px;
+    box-shadow: -3px -3px 8px rgba(255,255,255,0.4), 5px 6px 13px rgba(200,60,120,0.35);
+  }
+  .price-card h3 { font-size: 1.4rem; }
+  .price-card .tagline { color: var(--slate-soft); font-size: 0.95rem; margin: 6px 0 18px; min-height: 44px; }
+  .price-card .amount { font-size: 3rem; font-weight: 800; letter-spacing: -0.03em; }
+  .price-card .amount span { font-size: 1.05rem; font-weight: 600; color: var(--slate-soft); }
+  .price-card ul { list-style: none; margin: 24px 0 28px; display: grid; gap: 13px; }
+  .price-card li { display: flex; align-items: flex-start; gap: 11px; font-size: 0.97rem; }
+  .price-card li .check {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(145deg, #4fe0ac, #2bbf8a); color: #fff; font-size: 0.7rem; font-weight: 800;
+    box-shadow: -2px -2px 5px rgba(255,255,255,0.4), 2px 3px 6px rgba(40,160,110,0.35);
+    margin-top: 2px;
+  }
+  .price-card .btn { width: 100%; justify-content: center; }
+
+  /* ===== Trust band ===== */
+  .trust-band {
+    background: linear-gradient(160deg, #f4f1fd, #e9e4f7);
+    border-radius: var(--radius); box-shadow: var(--clay-shadow);
+    padding: 50px 44px;
+  }
+  .trust-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
+  .trust-points { display: grid; gap: 18px; }
+  .trust-point { display: flex; gap: 15px; align-items: flex-start; }
+  .trust-point .tic {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
+    background: var(--white); box-shadow: var(--clay-shadow-sm);
+  }
+  .trust-point h4 { font-size: 1.05rem; margin-bottom: 3px; }
+  .trust-point p { font-size: 0.92rem; color: var(--slate-soft); }
+
+  /* ===== FAQ ===== */
+  .faq-list { max-width: 780px; margin: 0 auto; display: grid; gap: 16px; }
+  .faq-item {
+    background: var(--surface); border-radius: var(--radius-sm);
+    box-shadow: var(--clay-shadow-sm); overflow: hidden;
+  }
+  .faq-q {
+    width: 100%; text-align: left; background: none; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700; font-size: 1.05rem; color: var(--slate);
+    padding: 22px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .faq-q:focus-visible { outline: 3px solid var(--blueberry); outline-offset: -3px; border-radius: var(--radius-sm); }
+  .faq-q .plus {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--white); box-shadow: var(--clay-shadow-sm); transition: transform .3s ease;
+    font-size: 1.2rem; color: var(--blueberry); font-weight: 700; line-height: 1;
+  }
+  .faq-q[aria-expanded="true"] .plus { transform: rotate(45deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+  .faq-a .faq-a-inner { padding: 0 26px 24px; color: var(--slate-soft); font-size: 0.98rem; }
+
+  /* ===== Final CTA ===== */
+  .final-cta {
+    text-align: center; background: linear-gradient(150deg, #7166e6, #5a4bd1);
+    border-radius: var(--radius); padding: 64px 40px; color: #fff;
+    box-shadow: var(--clay-shadow); position: relative; overflow: hidden;
+  }
+  .final-cta::before { content:""; position:absolute; width:220px; height:220px; border-radius:50%; background:rgba(255,107,170,0.4); filter: blur(40px); top:-60px; left:-40px; }
+  .final-cta::after { content:""; position:absolute; width:220px; height:220px; border-radius:50%; background:rgba(52,211,153,0.35); filter: blur(40px); bottom:-70px; right:-30px; }
+  .final-cta h2 { color: #fff; position: relative; }
+  .final-cta p { color: rgba(255,255,255,0.85); margin: 16px auto 30px; max-width: 520px; position: relative; font-size: 1.08rem; }
+  .final-cta .btn { position: relative; }
+
+  /* ===== Footer ===== */
+  footer { padding: 56px 0 40px; }
+  .footer-grid { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; margin-bottom: 34px; }
+  .footer-brand { max-width: 300px; }
+  .footer-brand p { color: var(--slate-soft); font-size: 0.95rem; margin-top: 14px; }
+  .footer-cols { display: flex; gap: 60px; flex-wrap: wrap; }
+  .footer-col h5 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--slate-soft); margin-bottom: 14px; }
+  .footer-col a { display: block; color: var(--slate); font-weight: 600; font-size: 0.95rem; margin-bottom: 10px; opacity: .85; }
+  .footer-col a:hover { opacity: 1; color: var(--blueberry-d); }
+  .footer-bottom {
+    border-top: 1px solid rgba(108,92,231,0.16); padding-top: 24px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    color: var(--slate-soft); font-size: 0.86rem;
+  }
+
+  /* ===== Scroll reveal ===== */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.2,.8,.25,1), transform .7s cubic-bezier(.2,.8,.25,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ===== Mobile ===== */
+  @media (max-width: 920px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-visual { min-height: 320px; order: -1; }
+    .code-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .features { grid-template-columns: 1fr 1fr; }
+    .trust-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .section { padding: 64px 0; }
+    .nav-links {
+      position: absolute; top: 78px; left: 24px; right: 24px;
+      flex-direction: column; align-items: stretch; gap: 6px;
+      background: var(--surface); border-radius: var(--radius-sm);
+      padding: 16px; box-shadow: var(--clay-shadow);
+      display: none;
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a.link { padding: 14px 16px; }
+    .nav-cta { margin-left: 0; width: 100%; justify-content: center; }
+    .nav-toggle { display: flex; }
+    .features { grid-template-columns: 1fr; }
+    .pricing { grid-template-columns: 1fr; }
+    .providers-inner { gap: 24px; padding: 26px; }
+    .footer-cols { gap: 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+    .reveal { transition: none; opacity: 1; transform: none; }
+    .step, .feature, .price-card, .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<header class="nav">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="#top" class="wordmark" aria-label="altkey home">
+        <span class="keycap" aria-hidden="true">a</span>altkey
+      </a>
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
+        <a class="link" href="#how">How it works</a>
+        <a class="link" href="#pricing">Pricing</a>
+        <a class="link" href="#faq">FAQ</a>
+        <a class="btn btn-primary nav-cta" href="#pricing">Get your key</a>
+      </nav>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="navLinks">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== HERO ===== -->
+<section class="section hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy reveal">
+        <span class="eyebrow">OpenAI-compatible proxy</span>
+        <h1>Turn the AI subscriptions you <span class="grad">already pay for</span> into an API key.</h1>
+        <p class="sub">Connect your ChatGPT Plus and Claude Pro accounts with OAuth. altkey hands you one API key on a standard endpoint — and routes every request through your existing subscription. No second bill at API rates.</p>
+        <div class="hero-ctas">
+          <a href="#pricing" class="btn btn-primary">Get your key</a>
+          <a href="#how" class="btn btn-soft">See how it works</a>
+        </div>
+        <div class="hero-trust">
+          <span><i class="dot" style="background:var(--mint)"></i> OAuth-only — no passwords</span>
+          <span><i class="dot" style="background:var(--butter)"></i> Revoke anytime</span>
+          <span><i class="dot" style="background:var(--bubblegum)"></i> 24/7 uptime</span>
+        </div>
+      </div>
+
+      <div class="hero-visual reveal" aria-hidden="false">
+        <div class="clay-blob blob-1" aria-hidden="true"></div>
+        <div class="clay-blob blob-2" aria-hidden="true"></div>
+        <div class="key-card" role="img" aria-label="An altkey API key connected to ChatGPT and Claude accounts">
+          <span class="endpoint-label">Your altkey</span>
+          <div class="clay-key">
+            <span class="ring" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5a3a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5"></circle><path d="M11.5 11.5 21 21"></path><path d="M17 17l3-3"></path><path d="M14 20l3-3"></path></svg>
+            </span>
+            <span class="keytext"><small>API key</small>ak-live-7Qx9...d2Kp</span>
+          </div>
+          <div class="conn-row">
+            <span class="conn-chip"><i class="status"></i> ChatGPT</span>
+            <span class="conn-chip"><i class="status"></i> Claude</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROVIDERS STRIP ===== -->
+<section class="providers">
+  <div class="wrap reveal">
+    <div class="providers-inner">
+      <span class="plabel">Works with the accounts you have:</span>
+      <span class="pmark">
+        <span class="ico" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#2E2A4A" aria-hidden="true"><path d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6 6 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .75 7.09 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07Zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.04l3.79-2.19a.62.62 0 0 0 .31-.54v-5.34l1.6.93v4.43a4.5 4.5 0 0 1-4.82 3.75Zm-9.6-4.1a4.48 4.48 0 0 1-.54-3l3.79 2.19a.62.62 0 0 0 .62 0l4.62-2.67v1.85L7.7 19.4a4.5 4.5 0 0 1-4.04-1.08Zm-1-8.26a4.5 4.5 0 0 1 2.35-1.97v4.51c0 .22.12.43.31.54l4.62 2.67-1.6.93-4.16-2.4a4.5 4.5 0 0 1-1.52-4.28Zm13.16 3.06-4.62-2.67 1.6-.93 4.16 2.4a4.5 4.5 0 0 1-.69 8.12v-4.51a.62.62 0 0 0-.45-.41Zm1.6-2.4-3.8-2.19a.62.62 0 0 0-.62 0L9.99 8.96V7.11l4.16-2.4a4.5 4.5 0 0 1 6.68 4.66Zm-10.4 3.3-1.6-.93V7.96a4.5 4.5 0 0 1 7.38-3.45l-3.8 2.19a.62.62 0 0 0-.3.54Zm.87-1.87L11.6 10.3l2.06 1.19v2.37l-2.06 1.19-2.06-1.19v-2.37Z"></path></svg>
+        </span>
+        OpenAI <span style="font-weight:600;color:var(--slate-soft);font-size:.9rem">(ChatGPT)</span>
+      </span>
+      <span class="pmark">
+        <span class="ico" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#D97757" aria-hidden="true"><path d="M16.4 3.5h-3.2l5.83 17h3.3l-5.93-17ZM7.6 3.5 1.67 20.5h3.36l1.2-3.55h6.2l1.2 3.55h3.36L11.06 3.5H7.6Zm-.3 10.3 2.04-6.02 2.04 6.02H7.3Z"></path></svg>
+        </span>
+        Anthropic <span style="font-weight:600;color:var(--slate-soft);font-size:.9rem">(Claude)</span>
+      </span>
+      <span class="pmark coming">+ more providers coming soon</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">How it works</span>
+      <h2>From login to live key in three steps.</h2>
+      <p>No new accounts to fund, no API tokens to provision. Connect what you already own.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="num" aria-hidden="true">1</div>
+        <h3>Connect your account</h3>
+        <p>Sign in with OAuth to ChatGPT, Claude, or both. altkey never sees a password — and you can disconnect with one click whenever you like.</p>
+      </div>
+      <div class="step reveal">
+        <div class="num" aria-hidden="true">2</div>
+        <h3>Get your key + endpoint</h3>
+        <p>altkey gives you a single <code>ak-</code> API key and an OpenAI-compatible base URL. One key covers every provider you connected.</p>
+      </div>
+      <div class="step reveal">
+        <div class="num" aria-hidden="true">3</div>
+        <h3>Send requests</h3>
+        <p>Point any OpenAI SDK at altkey. We proxy each call through your connected account, so usage is billed to your existing subscription.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CODE SHOWCASE ===== -->
+<section class="section" id="code">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Drop-in</span>
+      <h2>Change two lines. Keep your code.</h2>
+      <p>altkey speaks the OpenAI API. Swap the base URL and key, and your existing app just works.</p>
+    </div>
+    <div class="code-grid">
+      <!-- Python -->
+      <div class="code-card reveal">
+        <div class="code-top">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="fname">example.py</span>
+          <button class="copy-btn" data-copy="python" aria-label="Copy Python example">Copy</button>
+        </div>
+<pre id="code-python"><span class="tok-kw">from</span> <span class="tok-var">openai</span> <span class="tok-kw">import</span> <span class="tok-fn">OpenAI</span>
+
+<span class="tok-com"># Point the standard SDK at altkey</span>
+<span class="tok-var">client</span> = <span class="tok-fn">OpenAI</span>(
+    <span class="tok-var">base_url</span>=<span class="tok-str">"https://api.altkey.dev/v1"</span>,
+    <span class="tok-var">api_key</span>=<span class="tok-str">"ak-live-7Qx9d2Kp..."</span>,
+)
+
+<span class="tok-var">resp</span> = <span class="tok-var">client</span>.<span class="tok-var">chat</span>.<span class="tok-var">completions</span>.<span class="tok-fn">create</span>(
+    <span class="tok-var">model</span>=<span class="tok-str">"gpt-4o"</span>,
+    <span class="tok-var">messages</span>=[
+        {<span class="tok-str">"role"</span>: <span class="tok-str">"user"</span>,
+         <span class="tok-str">"content"</span>: <span class="tok-str">"Explain altkey in one line."</span>},
+    ],
+)
+<span class="tok-fn">print</span>(<span class="tok-var">resp</span>.<span class="tok-var">choices</span>[<span class="tok-num">0</span>].<span class="tok-var">message</span>.<span class="tok-var">content</span>)</pre>
+      </div>
+      <!-- curl -->
+      <div class="code-card reveal">
+        <div class="code-top">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="fname">terminal</span>
+          <button class="copy-btn" data-copy="curl" aria-label="Copy curl example">Copy</button>
+        </div>
+<pre id="code-curl"><span class="tok-fn">curl</span> https://api.altkey.dev/v1/chat/completions \
+  -H <span class="tok-str">"Authorization: Bearer ak-live-7Qx9d2Kp..."</span> \
+  -H <span class="tok-str">"Content-Type: application/json"</span> \
+  -d <span class="tok-str">'{
+    "model": "claude-3-5-sonnet",
+    "messages": [
+      { "role": "user",
+        "content": "Say hello from my own plan." }
+    ]
+  }'</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Why altkey</span>
+      <h2>Built for the way you already work.</h2>
+    </div>
+    <div class="features">
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        </div>
+        <h3>OpenAI-compatible drop-in</h3>
+        <p>Same endpoints, same request shapes. If your code talks to the OpenAI API today, it talks to altkey tomorrow.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FF6BAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <h3>OAuth-only, no passwords</h3>
+        <p>You authorize through the provider's own login. altkey never stores credentials and never scrapes the web UI.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+        </div>
+        <h3>24/7 VPS uptime</h3>
+        <p>Hosted on dedicated VPS infrastructure that stays online around the clock — your key is ready whenever your code runs.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="m4.9 4.9 2.8 2.8"></path><path d="m16.3 16.3 2.8 2.8"></path><circle cx="12" cy="12" r="4"></circle></svg>
+        </div>
+        <h3>Use your own limits</h3>
+        <p>Requests run on the subscription you already pay for. No surprise per-token bills — just the plan you already chose.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2a10 10 0 0 1 0 20"></path><path d="M2 12h6"></path><path d="M16 12h6"></path></svg>
+        </div>
+        <h3>One endpoint, both providers</h3>
+        <p>Route to OpenAI or Anthropic from a single key. Pick the model per request — altkey sends it to the right account.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="ficon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FF6BAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+        </div>
+        <h3>Usage dashboard</h3>
+        <p>See requests, connected providers, and recent activity at a glance — so you always know what your key is doing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Pricing</span>
+      <h2>Two plans. Both cheaper than paying API rates twice.</h2>
+      <p>altkey is a flat monthly fee on top of the subscriptions you already have.</p>
+    </div>
+    <div class="pricing">
+      <div class="price-card reveal">
+        <h3>Starter</h3>
+        <p class="tagline">For people on the $20 Claude Pro and/or ChatGPT Plus plan who want programmatic access.</p>
+        <div class="amount">$5<span>/month</span></div>
+        <ul>
+          <li><span class="check" aria-hidden="true">✓</span> Connect one or both providers</li>
+          <li><span class="check" aria-hidden="true">✓</span> One API key + OpenAI-compatible endpoint</li>
+          <li><span class="check" aria-hidden="true">✓</span> Routes through your existing subscription</li>
+          <li><span class="check" aria-hidden="true">✓</span> Usage dashboard</li>
+          <li><span class="check" aria-hidden="true">✓</span> 24/7 VPS uptime</li>
+        </ul>
+        <a href="#top" class="btn btn-soft">Start for $5</a>
+      </div>
+
+      <div class="price-card popular reveal">
+        <span class="badge-pop" aria-hidden="true">Most popular</span>
+        <h3>Pro</h3>
+        <p class="tagline">For power users running heavier workloads who need higher limits and headroom.</p>
+        <div class="amount">$25<span>/month</span></div>
+        <ul>
+          <li><span class="check" aria-hidden="true">✓</span> Everything in Starter</li>
+          <li><span class="check" aria-hidden="true">✓</span> Higher request limits</li>
+          <li><span class="check" aria-hidden="true">✓</span> Priority routing for power users</li>
+          <li><span class="check" aria-hidden="true">✓</span> Connect both providers under one key</li>
+          <li><span class="check" aria-hidden="true">✓</span> Priority support</li>
+        </ul>
+        <a href="#top" class="btn btn-primary">Get your key</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TRUST BAND ===== -->
+<section class="section" id="security">
+  <div class="wrap reveal">
+    <div class="trust-band">
+      <div class="trust-grid">
+        <div>
+          <span class="eyebrow">Security</span>
+          <h2 style="font-size:clamp(1.7rem,3.4vw,2.3rem)">Your subscriptions stay yours.</h2>
+          <p style="color:var(--slate-soft);margin-top:14px;font-size:1.05rem">altkey is a thin, honest proxy. We authenticate the way the providers intend — and we make it trivial to walk away.</p>
+        </div>
+        <div class="trust-points">
+          <div class="trust-point">
+            <span class="tic" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+            <div><h4>OAuth-only</h4><p>You log in with the provider. We never ask for or store your password.</p></div>
+          </div>
+          <div class="trust-point">
+            <span class="tic" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6BAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"></line></svg></span>
+            <div><h4>No scraping</h4><p>Real API access through official auth — not a brittle bot driving a web page.</p></div>
+          </div>
+          <div class="trust-point">
+            <span class="tic" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"></path></svg></span>
+            <div><h4>Revoke anytime</h4><p>Disconnect a provider or delete your key in one click. Access stops instantly.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">FAQ</span>
+      <h2>The honest questions.</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
+          Is this allowed by OpenAI and Anthropic?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1">
+          <div class="faq-a-inner">altkey uses each provider's own OAuth login and routes requests through your authenticated account. You are responsible for using your subscription within the terms you agreed to. altkey doesn't bypass auth, share accounts, or resell access — it gives <em>you</em> programmatic access to the plan you pay for.</div>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
+          Do you store my password?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2">
+          <div class="faq-a-inner">Never. Authentication happens entirely through the provider's OAuth flow. altkey holds an authorization token you can revoke at any time — we never see or save your login credentials.</div>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
+          Which providers are supported?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3">
+          <div class="faq-a-inner">Today you can connect OpenAI (ChatGPT) and Anthropic (Claude). One altkey key works for both, and you choose the model per request. More providers are coming soon.</div>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
+          How is this different from buying API credits?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
+          <div class="faq-a-inner">Provider API credits are billed separately, per token, on top of any subscription. altkey instead routes requests through the ChatGPT Plus or Claude Pro plan you already pay for — so you're not buying the same usage twice. You just pay altkey's flat monthly fee.</div>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
+          What happens to my limits?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
+          <div class="faq-a-inner">Requests count against your existing subscription's usage, exactly as they would in the official app. You're working within the limits of the plan you connected — altkey doesn't add or remove provider limits, it just makes that usage callable from code.</div>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false" aria-controls="faq-a6" id="faq-q6">
+          Can I cancel or disconnect whenever I want?
+          <span class="plus" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a" id="faq-a6" role="region" aria-labelledby="faq-q6">
+          <div class="faq-a-inner">Yes. Disconnect any provider, delete your key, or cancel your plan at any time from the dashboard. Revoking access takes effect immediately and your subscriptions remain entirely under your control.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="section" style="padding-top:0">
+  <div class="wrap reveal">
+    <div class="final-cta">
+      <h2>Get your key in under a minute.</h2>
+      <p>Connect an account, copy your key, and point your code at altkey. Start on Starter for $5 a month.</p>
+      <a href="#pricing" class="btn btn-pink">Connect an account</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#top" class="wordmark"><span class="keycap" aria-hidden="true">a</span>altkey</a>
+        <p>Turn the AI subscriptions you already pay for into an API key. OAuth-only, OpenAI-compatible, online 24/7.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h5>Product</h5>
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#code">Docs</a>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <a href="#security">Security</a>
+          <a href="#faq">FAQ</a>
+          <a href="#top">Status</a>
+          <a href="#top">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h5>Legal</h5>
+          <a href="#top">Terms</a>
+          <a href="#top">Privacy</a>
+          <a href="#security">Acceptable use</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 altkey. All rights reserved.</span>
+      <span>Not affiliated with OpenAI or Anthropic. Use your subscriptions within their terms.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ===== Mobile nav toggle =====
+  (function () {
+    var toggle = document.getElementById('navToggle');
+    var links = document.getElementById('navLinks');
+    toggle.addEventListener('click', function () {
+      var open = links.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    links.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        links.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
+
+  // ===== FAQ accordion =====
+  (function () {
+    document.querySelectorAll('.faq-q').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var expanded = btn.getAttribute('aria-expanded') === 'true';
+        var panel = document.getElementById(btn.getAttribute('aria-controls'));
+        btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        panel.style.maxHeight = expanded ? null : panel.scrollHeight + 'px';
+      });
+    });
+  })();
+
+  // ===== Copy to clipboard =====
+  (function () {
+    var snippets = {
+      python: 'from openai import OpenAI\n\n# Point the standard SDK at altkey\nclient = OpenAI(\n    base_url="https://api.altkey.dev/v1",\n    api_key="ak-live-7Qx9d2Kp...",\n)\n\nresp = client.chat.completions.create(\n    model="gpt-4o",\n    messages=[\n        {"role": "user", "content": "Explain altkey in one line."},\n    ],\n)\nprint(resp.choices[0].message.content)',
+      curl: 'curl https://api.altkey.dev/v1/chat/completions \\\n  -H "Authorization: Bearer ak-live-7Qx9d2Kp..." \\\n  -H "Content-Type: application/json" \\\n  -d \'{\n    "model": "claude-3-5-sonnet",\n    "messages": [\n      { "role": "user", "content": "Say hello from my own plan." }\n    ]\n  }\''
+    };
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = snippets[btn.getAttribute('data-copy')];
+        var done = function () {
+          var orig = 'Copy';
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = orig; btn.classList.remove('copied'); }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () { fallback(text); done(); });
+        } else { fallback(text); done(); }
+      });
+    });
+    function fallback(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  })();
+
+  // ===== Scroll reveal =====
+  (function () {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!-- altkey landing — Design gallery index -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>altkey — 10 landing page designs</title>
+  <meta name="description" content="Ten ultra-modern marketing-site concepts for altkey. Click any card to open the full page." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel: #14141c;
+      --panel-2: #1b1b26;
+      --line: rgba(255,255,255,.08);
+      --line-bright: rgba(255,255,255,.16);
+      --ink: #f4f4f7;
+      --muted: #a0a0ad;
+      --faint: #6c6c7a;
+      --accent: #7c5cff;
+      --accent-2: #22d3ee;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+      background-image:
+        radial-gradient(60% 50% at 15% -5%, rgba(124,92,255,.18), transparent 60%),
+        radial-gradient(50% 45% at 95% 0%, rgba(34,211,238,.12), transparent 55%);
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+    header.top { padding: 72px 0 8px; }
+    .brand {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: .04em;
+      color: var(--muted);
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+    h1 {
+      font-size: clamp(34px, 5.5vw, 60px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      margin: 22px 0 0;
+      max-width: 16ch;
+      background: linear-gradient(120deg, #fff 30%, var(--accent-2));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: clamp(15px, 1.6vw, 18px);
+      max-width: 60ch;
+      margin: 20px 0 0;
+    }
+    .meta {
+      margin: 26px 0 0;
+      display: flex; flex-wrap: wrap; gap: 10px;
+      font-family: var(--mono); font-size: 12.5px; color: var(--faint);
+    }
+    .meta span {
+      border: 1px solid var(--line); border-radius: 999px;
+      padding: 5px 12px; background: rgba(255,255,255,.02);
+    }
+
+    .grid {
+      margin: 44px 0 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--panel);
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+      display: flex; flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--line-bright);
+      box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    }
+    .card:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Mini visual swatch — each card themed to its design */
+    .swatch {
+      height: 168px; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .swatch .num {
+      position: absolute; top: 12px; left: 14px;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      opacity: .7; letter-spacing: .05em;
+    }
+    .swatch .name {
+      font-weight: 700; font-size: 20px; letter-spacing: -0.01em;
+      text-align: center; padding: 0 16px; z-index: 2;
+    }
+
+    /* per-design swatch theming */
+    .s01 { background: radial-gradient(80% 90% at 20% 10%, #7c5cff44, transparent), radial-gradient(70% 80% at 90% 90%, #22d3ee44, transparent), #0b0b14; }
+    .s01 .name, .s01 .num { color: #eae6ff; }
+    .s02 { background: #fff; }
+    .s02 .name { color: #000; } .s02 .num { color:#FF3B30; }
+    .s02::after { content:""; position:absolute; inset:14px; border:3px solid #000; box-shadow:6px 6px 0 #FF3B30; }
+    .s03 { background: #0a0e0a; }
+    .s03 .name, .s03 .num { color: #4AF626; font-family: var(--mono); text-shadow: 0 0 10px #4af62688; }
+    .s04 { background: #FAFAF8; }
+    .s04 .name { color:#111; } .s04 .num { color:#E2231A; }
+    .s04::before { content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:#11111122; }
+    .s05 { background: linear-gradient(135deg,#e8f0ff,#ffe9f2 55%,#e9fff4); }
+    .s05 .name { color:#18181B; } .s05 .num { color:#5B5BF5; }
+    .s06 { background:#05050a; }
+    .s06 .name { color:#fff; text-shadow:0 0 14px #FF2E97, 0 0 28px #00F0FF; } .s06 .num{ color:#00F0FF; }
+    .s07 { background:#ECE9F7; }
+    .s07 .name { color:#2E2A4A; } .s07 .num{ color:#6C5CE7; }
+    .s07::after { content:""; position:absolute; width:78px; height:78px; border-radius:24px; background:#6C5CE7; box-shadow: -8px -8px 18px #ffffffaa, 10px 12px 22px #6c5ce755; opacity:.25; }
+    .s08 { background: radial-gradient(60% 70% at 50% 30%, #1a1a1d, #0B0B0C); }
+    .s08 .name { color:#F2EFE6; } .s08 .num{ color:#C8A24B; }
+    .s08 .name::after{ content:""; display:block; width:54px; height:1px; background:#C8A24B; margin:10px auto 0; }
+    .s09 { background: linear-gradient(180deg,#1A1040,#7c1fb0 55%,#FB7185); }
+    .s09 .name { color:#fff; } .s09 .num{ color:#22D3EE; }
+    .s10 { background:#0E0E0E; }
+    .s10 .name { color:#C6FF00; font-weight:800; text-transform:uppercase; letter-spacing:-.02em; } .s10 .num{ color:#C6FF00; }
+
+    .card .body { padding: 16px 18px 18px; display:flex; flex-direction:column; gap:10px; flex:1; }
+    .card .desc { color: var(--muted); font-size: 13.5px; line-height:1.5; flex:1; }
+    .card .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .tags { display:flex; flex-wrap:wrap; gap:6px; }
+    .tags b { font:500 11px/1 var(--mono); color: var(--faint); border:1px solid var(--line); border-radius:6px; padding:5px 7px; }
+    .open {
+      font: 600 13px/1 var(--sans); color: var(--ink);
+      display:inline-flex; align-items:center; gap:6px;
+      border:1px solid var(--line-bright); border-radius:9px; padding:9px 13px;
+      transition: background .2s ease, border-color .2s ease;
+      white-space:nowrap;
+    }
+    .card:hover .open { background: var(--accent); border-color: var(--accent); }
+    .stretched { position:absolute; inset:0; z-index:1; }
+
+    footer { color: var(--faint); font-size: 13px; padding: 0 0 64px; border-top:1px solid var(--line); margin-top: 12px; padding-top: 28px; }
+    footer code { font-family: var(--mono); color: var(--muted); }
+    @media (max-width:560px){ header.top{ padding-top:48px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand"><span class="dot"></span> altkey · design exploration</div>
+      <h1>Ten ways to sell one API key.</h1>
+      <p class="lede">Ten ultra-modern, fully built landing-page concepts for altkey — turning the AI subscriptions you already pay for into a single OpenAI-compatible API key. Every page is a complete, self-contained build with the same content and structure, dressed in a distinct aesthetic. Click any card to open the live page.</p>
+      <div class="meta">
+        <span>10 full pages</span>
+        <span>self-contained HTML/CSS/JS</span>
+        <span>$5 &amp; $25 pricing</span>
+        <span>ChatGPT + Claude</span>
+        <span>responsive + a11y</span>
+      </div>
+    </header>
+
+    <main class="grid" id="grid"></main>
+
+    <footer>
+      Open any file directly, or serve the folder: <code>python -m http.server</code> from <code>homepage/</code>, then visit <code>localhost:8000</code>. Each design lives in its own <code>.html</code> file — no build step, no dependencies.
+    </footer>
+  </div>
+
+  <script>
+    const designs = [
+      { n:'01', file:'01-aurora-glass.html',   cls:'s01', name:'Aurora Glass',   desc:'Premium dark glassmorphism with drifting aurora gradients and gradient-text headlines. Linear/Vercel energy.', tags:['dark','glass','gradient'] },
+      { n:'02', file:'02-brutalist-mono.html', cls:'s02', name:'Brutalist Mono', desc:'Stark black & white, monospace, thick borders and hard offset shadows. Confident and raw.', tags:['brutalist','mono','high-contrast'] },
+      { n:'03', file:'03-neo-terminal.html',   cls:'s03', name:'Neo-Terminal',   desc:'Phosphor-green CRT terminal with a typewriter hero and scanlines. Built for developers.', tags:['terminal','green','dev'] },
+      { n:'04', file:'04-swiss-editorial.html',cls:'s04', name:'Swiss Editorial', desc:'International typographic style: strict grid, huge whitespace, one signal-red accent.', tags:['minimal','grid','editorial'] },
+      { n:'05', file:'05-bento-gradient.html', cls:'s05', name:'Bento Gradient',  desc:'Light, friendly bento-box grid with soft pastel gradient cards. Modern SaaS default.', tags:['bento','light','soft'] },
+      { n:'06', file:'06-cyberpunk-neon.html', cls:'s06', name:'Cyberpunk Neon',  desc:'Neon magenta + cyan HUD over a dark wireframe grid. Futuristic, but kept legible.', tags:['neon','HUD','futuristic'] },
+      { n:'07', file:'07-soft-clay.html',      cls:'s07', name:'Soft Clay',       desc:'Claymorphic puffy 3D shapes, candy pastels and pressable buttons. Tactile and friendly.', tags:['clay','pastel','playful'] },
+      { n:'08', file:'08-luxury-noir.html',    cls:'s08', name:'Luxury Noir',     desc:'Black & champagne gold with serif display type. Understated, expensive, editorial.', tags:['luxury','gold','serif'] },
+      { n:'09', file:'09-retro-future.html',   cls:'s09', name:'Retro Future',    desc:'Tasteful synthwave: sunset gradient, perspective grid horizon and chrome type.', tags:['synthwave','retro','grid'] },
+      { n:'10', file:'10-kinetic-bold.html',   cls:'s10', name:'Kinetic Bold',    desc:'Oversized kinetic typography, scrolling marquees and acid-lime accents. Poster energy.', tags:['kinetic','bold','marquee'] },
+    ];
+    const grid = document.getElementById('grid');
+    grid.innerHTML = designs.map(d => `
+      <article class="card">
+        <a class="stretched" href="${d.file}" aria-label="Open ${d.name} design"></a>
+        <div class="swatch ${d.cls}">
+          <span class="num">${d.n}</span>
+          <span class="name">${d.name}</span>
+        </div>
+        <div class="body">
+          <p class="desc">${d.desc}</p>
+          <div class="tags">${d.tags.map(t=>`<b>${t}</b>`).join('')}</div>
+          <div class="row">
+            <span class="open" style="position:relative;z-index:2">Open design →</span>
+          </div>
+        </div>
+      </article>
+    `).join('');
+  </script>
+</body>
+</html>

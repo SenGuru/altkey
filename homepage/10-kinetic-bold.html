@@ -1,0 +1,1014 @@
+<!-- altkey landing — Design 10: Kinetic Bold -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>altkey — Turn the AI subscriptions you already pay for into an API key</title>
+<meta name="description" content="altkey is a reverse proxy that turns your ChatGPT Plus and Claude subscriptions into one OpenAI-compatible API key. OAuth-only, no scraping, 24/7 uptime. Starts at $5/mo." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --black: #0E0E0E;
+    --off: #F5F5F0;
+    --lime: #C6FF00;
+    --lime-dim: #a8d800;
+    --ink-60: rgba(245, 245, 240, 0.62);
+    --ink-40: rgba(245, 245, 240, 0.40);
+    --line: rgba(245, 245, 240, 0.14);
+    --maxw: 1320px;
+    --pad: clamp(1.1rem, 4vw, 4rem);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--black);
+    color: var(--off);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    line-height: 1.55;
+    overflow-x: hidden;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--lime); color: var(--black); }
+
+  a { color: inherit; text-decoration: none; }
+
+  h1, h2, h3, .display {
+    font-family: "Archivo", system-ui, sans-serif;
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding-left: var(--pad); padding-right: var(--pad); }
+
+  /* ---- Focus ---- */
+  a:focus-visible, button:focus-visible, summary:focus-visible, .btn:focus-visible {
+    outline: 3px solid var(--lime);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: "Archivo", sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    font-size: 0.98rem;
+    padding: 0.95rem 1.6rem;
+    border: 2px solid var(--lime);
+    background: var(--lime);
+    color: var(--black);
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.1s ease;
+    line-height: 1;
+  }
+  .btn:hover { background: transparent; color: var(--lime); }
+  .btn:active { transform: translateY(2px); }
+
+  .btn.ghost {
+    background: transparent;
+    color: var(--off);
+    border-color: var(--off);
+  }
+  .btn.ghost:hover { background: var(--off); color: var(--black); }
+
+  .btn.sm { padding: 0.7rem 1.1rem; font-size: 0.85rem; }
+
+  /* ---- Nav ---- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14, 14, 14, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--off);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+  .wordmark {
+    font-family: "Archivo", sans-serif;
+    font-weight: 900;
+    font-size: 1.7rem;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
+    display: inline-flex;
+    align-items: center;
+  }
+  .wordmark .dot { color: var(--lime); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    font-family: "Archivo", sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+  }
+  .nav-links a.link { position: relative; padding: 0.3rem 0; }
+  .nav-links a.link::after {
+    content: "";
+    position: absolute; left: 0; bottom: -2px;
+    width: 0; height: 3px; background: var(--lime);
+    transition: width 0.2s ease;
+  }
+  .nav-links a.link:hover::after { width: 100%; }
+
+  .nav-toggle {
+    display: none;
+    background: none; border: 2px solid var(--off);
+    width: 46px; height: 42px;
+    cursor: pointer; color: var(--off);
+    flex-direction: column; justify-content: center; align-items: center; gap: 4px;
+  }
+  .nav-toggle span { display: block; width: 22px; height: 2.5px; background: var(--off); transition: 0.2s; }
+
+  /* ---- Sections ---- */
+  section { position: relative; }
+  .seclabel {
+    font-family: "Archivo", sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    color: var(--lime);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  .seclabel::before {
+    content: "";
+    width: 38px; height: 3px; background: var(--lime); display: inline-block;
+  }
+
+  /* ---- Hero ---- */
+  .hero { padding-top: clamp(2.5rem, 6vw, 5rem); padding-bottom: clamp(2rem, 4vw, 3rem); }
+  .hero h1 {
+    font-size: clamp(3.1rem, 13.5vw, 13rem);
+    line-height: 0.84;
+    margin: 1.4rem 0 0;
+  }
+  .hero h1 .lime { color: var(--lime); }
+  .hero h1 .outline {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--off);
+  }
+  .hero-sub {
+    font-size: clamp(1.05rem, 2vw, 1.4rem);
+    max-width: 38ch;
+    margin: 1.8rem 0 0;
+    color: var(--ink-60);
+    line-height: 1.45;
+  }
+  .hero-sub strong { color: var(--off); font-weight: 600; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2.2rem; align-items: center; }
+  .hero-note { font-size: 0.85rem; color: var(--ink-40); margin-top: 1.1rem; }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: clamp(2rem, 4vw, 4rem);
+    align-items: center;
+  }
+
+  /* ---- Code block ---- */
+  .codecard {
+    background: #060606;
+    border: 2px solid var(--off);
+    box-shadow: 12px 12px 0 var(--lime);
+    overflow: hidden;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .codecard .bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 2px solid var(--line);
+    background: #0b0b0b;
+  }
+  .codecard .bar .fn {
+    font-size: 0.72rem; color: var(--ink-60);
+    text-transform: uppercase; letter-spacing: 0.12em; margin-left: 0.4rem;
+  }
+  .dot3 { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-40); }
+  .dot3.l { background: var(--lime); border-color: var(--lime); }
+  .copybtn {
+    margin-left: auto;
+    background: transparent; border: 1.5px solid var(--ink-40); color: var(--ink-60);
+    font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.68rem;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 0.32rem 0.6rem; cursor: pointer; transition: 0.15s;
+  }
+  .copybtn:hover { border-color: var(--lime); color: var(--lime); }
+  .copybtn.done { background: var(--lime); color: var(--black); border-color: var(--lime); }
+  .codecard pre {
+    margin: 0; padding: 1.2rem 1.3rem;
+    font-size: clamp(0.72rem, 1.05vw, 0.86rem);
+    line-height: 1.75; overflow-x: auto;
+    color: #dcdcd6;
+    tab-size: 2;
+  }
+  .tk-key { color: var(--lime); }
+  .tk-str { color: #9fe88d; }
+  .tk-fn { color: #8ab4ff; }
+  .tk-com { color: var(--ink-40); font-style: italic; }
+  .tk-var { color: #e6e6e0; }
+  .tk-num { color: #ffb86c; }
+
+  /* ---- Marquee ---- */
+  .marquee {
+    border-top: 3px solid var(--off);
+    border-bottom: 3px solid var(--off);
+    background: var(--lime);
+    color: var(--black);
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0.55rem 0;
+  }
+  .marquee.dark { background: var(--black); color: var(--off); border-color: var(--off); }
+  .marquee-track {
+    display: inline-flex;
+    align-items: center;
+    will-change: transform;
+    animation: scrollx 26s linear infinite;
+  }
+  .marquee.rev .marquee-track { animation-direction: reverse; animation-duration: 32s; }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  .marquee-track span {
+    font-family: "Archivo", sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: clamp(1.3rem, 3vw, 2.3rem);
+    letter-spacing: -0.01em;
+    padding: 0 1.3rem;
+    display: inline-flex; align-items: center; gap: 1.3rem;
+  }
+  .marquee-track .star { color: var(--black); font-size: 0.8em; }
+  .marquee.dark .marquee-track .star { color: var(--lime); }
+  @keyframes scrollx {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ---- Providers strip ---- */
+  .providers { padding: clamp(2.5rem, 5vw, 4rem) 0; border-bottom: 2px solid var(--line); }
+  .provider-row { display: flex; flex-wrap: wrap; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; margin-top: 1.6rem; }
+  .provider {
+    display: flex; align-items: center; gap: 0.8rem;
+    font-family: "Archivo", sans-serif; font-weight: 800; font-size: clamp(1.3rem, 3vw, 2rem);
+    text-transform: uppercase; letter-spacing: -0.02em;
+  }
+  .provider svg { flex-shrink: 0; }
+  .provider .tag { font-size: 0.62em; color: var(--ink-40); font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .provider.soon { color: var(--ink-40); }
+  .provider.soon .badge {
+    font-family: "Space Grotesk", sans-serif; font-size: 0.6rem; letter-spacing: 0.12em;
+    border: 1.5px solid var(--ink-40); padding: 0.2rem 0.5rem; text-transform: uppercase; font-weight: 600;
+  }
+
+  /* ---- How it works ---- */
+  .how { padding: clamp(3.5rem, 8vw, 7rem) 0; }
+  .how h2 { font-size: clamp(2.4rem, 8vw, 6rem); margin: 1.2rem 0 0; max-width: 16ch; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 3rem; border-top: 2px solid var(--off); }
+  .step { padding: 2.2rem 1.8rem 2.4rem; border-bottom: 2px solid var(--off); border-right: 2px solid var(--line); position: relative; }
+  .step:last-child { border-right: none; }
+  .step .num {
+    font-family: "Archivo", sans-serif; font-weight: 900;
+    font-size: clamp(3.5rem, 7vw, 6rem); line-height: 0.8;
+    color: transparent; -webkit-text-stroke: 2px var(--lime);
+  }
+  .step h3 { font-size: 1.5rem; margin: 1.2rem 0 0.7rem; letter-spacing: -0.02em; }
+  .step p { color: var(--ink-60); font-size: 0.98rem; }
+  .step .icon { position: absolute; top: 2.2rem; right: 1.8rem; color: var(--lime); }
+
+  /* ---- Code showcase ---- */
+  .showcase { padding: clamp(3rem, 7vw, 6rem) 0; }
+  .showcase-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; margin-top: 2.5rem; }
+  .showcase h2 { font-size: clamp(2.2rem, 6vw, 4.5rem); margin: 1.1rem 0 1.4rem; }
+  .showcase p.lead { color: var(--ink-60); font-size: 1.08rem; max-width: 42ch; }
+  .tabs { display: flex; gap: 0; margin-bottom: -2px; }
+  .tab {
+    font-family: "Archivo", sans-serif; font-weight: 800; text-transform: uppercase;
+    font-size: 0.78rem; letter-spacing: 0.06em;
+    padding: 0.6rem 1.2rem; border: 2px solid var(--off); background: transparent; color: var(--off);
+    cursor: pointer; border-bottom: none;
+  }
+  .tab[aria-selected="true"] { background: var(--lime); color: var(--black); border-color: var(--off); }
+  .tab:not([aria-selected="true"]):hover { background: rgba(245,245,240,0.08); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ---- Features ---- */
+  .features { padding: clamp(3.5rem, 8vw, 7rem) 0; }
+  .features h2 { font-size: clamp(2.4rem, 8vw, 6rem); margin: 1.2rem 0 0; }
+  .fgrid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    margin-top: 3rem; border: 2px solid var(--off);
+  }
+  .feature {
+    padding: 2rem 1.8rem 2.2rem;
+    border-right: 2px solid var(--line); border-bottom: 2px solid var(--line);
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .feature:nth-child(3n) { border-right: none; }
+  .feature:nth-child(n+4) { border-bottom: none; }
+  .feature:hover { background: var(--lime); color: var(--black); }
+  .feature:hover .fnum, .feature:hover p { color: var(--black); }
+  .feature:hover .ficon { color: var(--black); }
+  .ficon { color: var(--lime); margin-bottom: 1rem; }
+  .feature:hover .ficon { color: var(--black); }
+  .fnum { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; color: var(--ink-40); letter-spacing: 0.1em; }
+  .feature h3 { font-size: 1.32rem; margin: 0.5rem 0 0.7rem; letter-spacing: -0.02em; }
+  .feature p { color: var(--ink-60); font-size: 0.95rem; }
+
+  /* ---- Pricing ---- */
+  .pricing { padding: clamp(3.5rem, 8vw, 7rem) 0; }
+  .pricing h2 { font-size: clamp(2.4rem, 8vw, 6rem); margin: 1.2rem 0 0; }
+  .pgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; margin-top: 3rem; border: 2px solid var(--off); }
+  .plan { padding: clamp(1.8rem, 3vw, 2.8rem); position: relative; }
+  .plan.starter { border-right: 2px solid var(--off); }
+  .plan.pro { background: var(--lime); color: var(--black); }
+  .plan .ribbon {
+    position: absolute; top: 0; right: 0;
+    background: var(--black); color: var(--lime);
+    font-family: "Archivo", sans-serif; font-weight: 800; text-transform: uppercase;
+    font-size: 0.72rem; letter-spacing: 0.1em; padding: 0.4rem 0.9rem;
+  }
+  .plan .pname { font-family: "Archivo", sans-serif; font-weight: 900; text-transform: uppercase; font-size: 1.5rem; letter-spacing: -0.02em; }
+  .plan .price { display: flex; align-items: baseline; gap: 0.4rem; margin: 1rem 0 0.3rem; }
+  .plan .price .amt { font-family: "Archivo", sans-serif; font-weight: 900; font-size: clamp(3.2rem, 7vw, 5rem); line-height: 0.85; letter-spacing: -0.04em; }
+  .plan .price .per { font-weight: 600; font-size: 1rem; }
+  .plan .ptag { color: var(--ink-60); font-size: 0.95rem; margin-bottom: 1.6rem; min-height: 2.8em; }
+  .plan.pro .ptag { color: rgba(14,14,14,0.7); }
+  .plan ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.8rem; }
+  .plan li { display: flex; gap: 0.7rem; align-items: flex-start; font-size: 0.97rem; }
+  .plan li svg { flex-shrink: 0; margin-top: 3px; color: var(--lime); }
+  .plan.pro li svg { color: var(--black); }
+  .plan .btn { width: 100%; justify-content: center; }
+  .plan.pro .btn { background: var(--black); border-color: var(--black); color: var(--lime); }
+  .plan.pro .btn:hover { background: transparent; color: var(--black); }
+  .pricing-note { text-align: center; color: var(--ink-40); font-size: 0.88rem; margin-top: 1.6rem; }
+
+  /* ---- Trust band ---- */
+  .trust { background: var(--off); color: var(--black); padding: clamp(3rem, 7vw, 6rem) 0; }
+  .trust h2 { font-size: clamp(2rem, 6vw, 4.5rem); max-width: 18ch; margin: 1rem 0 0; }
+  .trust .seclabel { color: var(--black); }
+  .trust .seclabel::before { background: var(--black); }
+  .trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 3rem; }
+  .trust-item { border-top: 3px solid var(--black); padding-top: 1.1rem; }
+  .trust-item h3 { font-size: 1.15rem; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  .trust-item p { font-size: 0.92rem; color: rgba(14,14,14,0.66); }
+  .trust-item .ti-ico { color: var(--lime); background: var(--black); display: inline-flex; padding: 6px; margin-bottom: 0.9rem; }
+
+  /* ---- FAQ ---- */
+  .faq { padding: clamp(3.5rem, 8vw, 7rem) 0; }
+  .faq h2 { font-size: clamp(2.4rem, 8vw, 6rem); margin: 1.2rem 0 0; }
+  .accordion { margin-top: 2.8rem; border-top: 2px solid var(--off); }
+  .acc-item { border-bottom: 2px solid var(--line); }
+  .acc-q {
+    width: 100%; background: none; border: none; cursor: pointer; color: var(--off);
+    display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+    padding: 1.6rem 0; text-align: left;
+    font-family: "Archivo", sans-serif; font-weight: 800; text-transform: uppercase;
+    font-size: clamp(1.05rem, 2.4vw, 1.6rem); letter-spacing: -0.01em; line-height: 1.1;
+  }
+  .acc-q:hover { color: var(--lime); }
+  .acc-q .plus { flex-shrink: 0; width: 30px; height: 30px; position: relative; }
+  .acc-q .plus::before, .acc-q .plus::after {
+    content: ""; position: absolute; background: var(--lime); top: 50%; left: 50%; transition: transform 0.25s ease;
+  }
+  .acc-q .plus::before { width: 22px; height: 3px; transform: translate(-50%, -50%); }
+  .acc-q .plus::after { width: 3px; height: 22px; transform: translate(-50%, -50%); }
+  .acc-q[aria-expanded="true"] .plus::after { transform: translate(-50%, -50%) rotate(90deg); opacity: 0; }
+  .acc-a { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .acc-a-inner { padding: 0 0 1.7rem; color: var(--ink-60); font-size: 1.02rem; max-width: 68ch; }
+  .acc-a-inner a { color: var(--lime); text-decoration: underline; }
+
+  /* ---- Footer ---- */
+  footer { border-top: 3px solid var(--off); padding: clamp(3rem, 6vw, 5rem) 0 2.5rem; }
+  .foot-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2.5rem; }
+  .foot-brand .wordmark { font-size: clamp(3rem, 10vw, 6rem); }
+  .foot-brand p { color: var(--ink-60); max-width: 30ch; margin-top: 0.8rem; }
+  .foot-cols { display: flex; gap: clamp(2.5rem, 6vw, 5rem); flex-wrap: wrap; }
+  .foot-col h4 { font-family: "Archivo", sans-serif; font-weight: 800; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.14em; color: var(--ink-40); margin-bottom: 1rem; }
+  .foot-col a { display: block; padding: 0.32rem 0; color: var(--ink-60); font-size: 0.95rem; }
+  .foot-col a:hover { color: var(--lime); }
+  .foot-bottom {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem;
+    margin-top: 3rem; padding-top: 1.6rem; border-top: 2px solid var(--line);
+    font-size: 0.82rem; color: var(--ink-40);
+  }
+
+  /* ---- Scroll reveal ---- */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---- Kinetic on-scroll headline ---- */
+  .kinetic { display: inline-block; transition: transform 0.05s linear; will-change: transform; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 1000px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-grid .codecard { margin-top: 1.5rem; }
+    .showcase-grid { grid-template-columns: 1fr; }
+    .trust-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem;
+      position: absolute; top: 72px; left: 0; right: 0;
+      background: var(--black); border-bottom: 2px solid var(--off);
+      padding: 1.2rem var(--pad) 1.6rem; font-size: 1rem;
+    }
+    .nav-links.open a.link { padding: 0.6rem 0; width: 100%; }
+    .nav-links.open .btn { margin-top: 0.6rem; }
+    .nav-toggle { display: flex; }
+    .steps { grid-template-columns: 1fr; }
+    .step { border-right: none; }
+    .fgrid { grid-template-columns: 1fr; }
+    .feature { border-right: none; }
+    .feature:nth-child(n+1) { border-bottom: 2px solid var(--line); }
+    .feature:last-child { border-bottom: none; }
+    .pgrid { grid-template-columns: 1fr; }
+    .plan.starter { border-right: none; border-bottom: 2px solid var(--off); }
+    .trust-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto; }
+    .marquee-track { animation: none !important; transform: none !important; }
+    .kinetic { transform: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="wordmark" aria-label="altkey home">altkey<span class="dot">.</span></a>
+    <nav class="nav-links" id="navLinks" aria-label="Primary">
+      <a href="#how" class="link">How it works</a>
+      <a href="#pricing" class="link">Pricing</a>
+      <a href="#faq" class="link">FAQ</a>
+      <a href="#pricing" class="btn sm">Get your key</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="seclabel">Reverse proxy for AI subscriptions</span>
+        <h1>
+          <span class="kinetic" data-speed="0.06">Already</span><br />
+          <span class="kinetic lime" data-speed="-0.05">paying.</span><br />
+          <span class="kinetic outline" data-speed="0.08">Now</span> <span class="kinetic" data-speed="-0.03">scripting.</span>
+        </h1>
+        <p class="hero-sub">
+          Turn the AI subscriptions you <strong>already pay for</strong> — ChatGPT Plus and Claude —
+          into one API key on an OpenAI-compatible endpoint. Use your real subscription, not double-priced API tokens.
+        </p>
+        <div class="hero-cta">
+          <a href="#pricing" class="btn">Get your key →</a>
+          <a href="#how" class="btn ghost">See how it works</a>
+        </div>
+        <p class="hero-note">OAuth-only · No passwords stored · Revoke anytime · Starts at $5/mo</p>
+      </div>
+
+      <div>
+        <div class="codecard" aria-label="Example code using altkey">
+          <div class="bar">
+            <span class="dot3 l"></span><span class="dot3"></span><span class="dot3"></span>
+            <span class="fn">hello.py</span>
+            <button class="copybtn" data-copy="hero">Copy</button>
+          </div>
+<pre id="code-hero"><span class="tk-com"># point any OpenAI SDK at altkey</span>
+<span class="tk-key">from</span> openai <span class="tk-key">import</span> <span class="tk-var">OpenAI</span>
+
+client = <span class="tk-fn">OpenAI</span>(
+  base_url=<span class="tk-str">"https://api.altkey.dev/v1"</span>,
+  api_key=<span class="tk-str">"ak-live-7Qx..."</span>,   <span class="tk-com"># your altkey key</span>
+)
+
+resp = client.chat.completions.<span class="tk-fn">create</span>(
+  model=<span class="tk-str">"gpt-4o"</span>,
+  messages=[{<span class="tk-str">"role"</span>: <span class="tk-str">"user"</span>,
+             <span class="tk-str">"content"</span>: <span class="tk-str">"ship it"</span>}],
+)
+<span class="tk-fn">print</span>(resp.choices[<span class="tk-num">0</span>].message.content)
+<span class="tk-com"># billed to YOUR ChatGPT Plus plan ✦</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MARQUEE ================= -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Stop paying twice <span class="star">✦</span> Use your own subscription <span class="star">✦</span> One key, two providers <span class="star">✦</span> OpenAI-compatible <span class="star">✦</span> </span>
+    <span>Stop paying twice <span class="star">✦</span> Use your own subscription <span class="star">✦</span> One key, two providers <span class="star">✦</span> OpenAI-compatible <span class="star">✦</span> </span>
+  </div>
+</div>
+
+<!-- ================= PROVIDERS ================= -->
+<section class="providers">
+  <div class="wrap reveal">
+    <span class="seclabel">Connect what you already have</span>
+    <div class="provider-row">
+      <div class="provider">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M22.28 9.82a5.99 5.99 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.5-2.9A6 6 0 0 0 4.98 4.18a5.99 5.99 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.5 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zM13.26 22.43a4.5 4.5 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.5 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.14.09 4.78 2.76a.78.78 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.96a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.35-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.07.07 0 0 1-.07 0L3.97 14a4.5 4.5 0 0 1-1.63-6.1zm16.6 3.86l-5.83-3.39 2.02-1.16a.07.07 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12V12.4a.79.79 0 0 0-.4-.65zm2.01-3.02l-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.42 9.24V6.91a.07.07 0 0 1 .03-.06l4.83-2.78a4.5 4.5 0 0 1 6.68 4.66zM8.32 12.86L6.3 11.7a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.72 5.46a.78.78 0 0 0-.4.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"/>
+        </svg>
+        OpenAI <span class="tag">ChatGPT Plus</span>
+      </div>
+      <div class="provider">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M16.78 3h-3.2L19.4 21h3.2L16.78 3zM7.22 3L1.4 21h3.27l1.19-3.78h6.09L13.13 21h3.27L10.58 3H7.22zm-.2 11.4L9 7.8l1.98 6.6H7.02z"/>
+        </svg>
+        Anthropic <span class="tag">Claude</span>
+      </div>
+      <div class="provider soon">
+        <span class="badge">More coming soon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="seclabel">How it works</span>
+      <h2>Three steps from <span style="color:var(--lime)">login</span> to API call.</h2>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <span class="num">01</span>
+        <span class="icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 0 10h-3m-6 0H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </span>
+        <h3>Connect your account</h3>
+        <p>Sign in to ChatGPT and/or Claude with OAuth. No passwords pass through altkey — you authorize on the provider's own login page, and you can revoke access whenever you want.</p>
+      </div>
+      <div class="step">
+        <span class="num">02</span>
+        <span class="icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg>
+        </span>
+        <h3>Get your key + endpoint</h3>
+        <p>altkey hands you one API key and an OpenAI-compatible base URL. Drop it into any SDK or tool that speaks the OpenAI API — no rewrites, no new client library.</p>
+      </div>
+      <div class="step">
+        <span class="num">03</span>
+        <span class="icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </span>
+        <h3>Send requests</h3>
+        <p>Call the key like any API. altkey proxies each request through your connected account, so it's billed to your existing ChatGPT Plus or Claude subscription — not per-token API rates.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MARQUEE 2 (dark) ================= -->
+<div class="marquee dark rev" aria-hidden="true">
+  <div class="marquee-track">
+    <span>api.altkey.dev/v1 <span class="star">/</span> drop-in OpenAI SDK <span class="star">/</span> ak-live-… <span class="star">/</span> 24/7 uptime <span class="star">/</span> </span>
+    <span>api.altkey.dev/v1 <span class="star">/</span> drop-in OpenAI SDK <span class="star">/</span> ak-live-… <span class="star">/</span> 24/7 uptime <span class="star">/</span> </span>
+  </div>
+</div>
+
+<!-- ================= CODE SHOWCASE ================= -->
+<section class="showcase">
+  <div class="wrap">
+    <div class="showcase-grid">
+      <div class="reveal">
+        <span class="seclabel">Drop-in code</span>
+        <h2>If it speaks OpenAI, it speaks altkey.</h2>
+        <p class="lead">Same SDKs, same request shapes, same response format. Change two lines — the <code style="font-family:'JetBrains Mono',monospace;color:var(--lime)">base_url</code> and your key — and your existing code runs on the subscription you already pay for.</p>
+      </div>
+
+      <div class="reveal">
+        <div class="tabs" role="tablist" aria-label="Code examples">
+          <button class="tab" role="tab" id="tab-py" aria-selected="true" aria-controls="panel-py">Python</button>
+          <button class="tab" role="tab" id="tab-curl" aria-selected="false" aria-controls="panel-curl">curl</button>
+        </div>
+
+        <div class="panel active" id="panel-py" role="tabpanel" aria-labelledby="tab-py">
+          <div class="codecard">
+            <div class="bar">
+              <span class="dot3 l"></span><span class="dot3"></span><span class="dot3"></span>
+              <span class="fn">app.py</span>
+              <button class="copybtn" data-copy="py">Copy</button>
+            </div>
+<pre id="code-py"><span class="tk-key">from</span> openai <span class="tk-key">import</span> <span class="tk-var">OpenAI</span>
+
+client = <span class="tk-fn">OpenAI</span>(
+    base_url=<span class="tk-str">"https://api.altkey.dev/v1"</span>,
+    api_key=<span class="tk-str">"ak-live-7QxR2m9pK4vN8sLd"</span>,
+)
+
+stream = client.chat.completions.<span class="tk-fn">create</span>(
+    model=<span class="tk-str">"claude-3-5-sonnet"</span>,
+    messages=[
+        {<span class="tk-str">"role"</span>: <span class="tk-str">"user"</span>,
+         <span class="tk-str">"content"</span>: <span class="tk-str">"Summarize this PR in 3 bullets."</span>},
+    ],
+    stream=<span class="tk-key">True</span>,
+)
+
+<span class="tk-key">for</span> chunk <span class="tk-key">in</span> stream:
+    <span class="tk-fn">print</span>(chunk.choices[<span class="tk-num">0</span>].delta.content <span class="tk-key">or</span> <span class="tk-str">""</span>, end=<span class="tk-str">""</span>)</pre>
+          </div>
+        </div>
+
+        <div class="panel" id="panel-curl" role="tabpanel" aria-labelledby="tab-curl" hidden>
+          <div class="codecard">
+            <div class="bar">
+              <span class="dot3 l"></span><span class="dot3"></span><span class="dot3"></span>
+              <span class="fn">request.sh</span>
+              <button class="copybtn" data-copy="curl">Copy</button>
+            </div>
+<pre id="code-curl"><span class="tk-var">curl</span> https://api.altkey.dev/v1/chat/completions \
+  -H <span class="tk-str">"Authorization: Bearer ak-live-7QxR2m9pK4vN8sLd"</span> \
+  -H <span class="tk-str">"Content-Type: application/json"</span> \
+  -d <span class="tk-str">'{
+    "model": "gpt-4o",
+    "messages": [
+      { "role": "user", "content": "ping" }
+    ]
+  }'</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section class="features">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="seclabel">Why altkey</span>
+      <h2>Built to <span style="color:var(--lime)">disappear</span><br />into your stack.</h2>
+    </div>
+    <div class="fgrid reveal">
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+        <span class="fnum">01</span>
+        <h3>OpenAI-compatible drop-in</h3>
+        <p>Standard /v1 chat completions schema. Works with the OpenAI SDKs, LangChain, Cursor, and anything that lets you set a base URL.</p>
+      </div>
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <span class="fnum">02</span>
+        <h3>OAuth-only, no passwords</h3>
+        <p>You authorize on the provider's own login. altkey never sees or stores a password, and never scrapes a browser session. Revoke in one click.</p>
+      </div>
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+        <span class="fnum">03</span>
+        <h3>24/7 VPS uptime</h3>
+        <p>Hosted on dedicated VPS infrastructure that stays online around the clock — not a laptop or a free tier that sleeps. Always there when your jobs run.</p>
+      </div>
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+        <span class="fnum">04</span>
+        <h3>Use your own limits</h3>
+        <p>Requests run on the usage that comes with your Plus or Pro plan. No surprise per-token bill — you spend the allowance you've already bought.</p>
+      </div>
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+        <span class="fnum">05</span>
+        <h3>One endpoint, both providers</h3>
+        <p>Connect ChatGPT and Claude to a single key. Switch between OpenAI and Anthropic models by name — no second integration, no second base URL.</p>
+      </div>
+      <div class="feature">
+        <span class="ficon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+        <span class="fnum">06</span>
+        <h3>Usage dashboard</h3>
+        <p>See requests, connected accounts, and which provider handled what — all in one place. Rotate keys and manage connections without leaving the dashboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="seclabel">Pricing</span>
+      <h2>Two plans. <span style="color:var(--lime)">No per-token bill.</span></h2>
+    </div>
+    <div class="pgrid reveal">
+      <div class="plan starter">
+        <div class="pname">Starter</div>
+        <div class="price"><span class="amt">$5</span><span class="per">/ month</span></div>
+        <p class="ptag">For people on the $20 Claude Pro and/or ChatGPT Plus plan. Connect one or both.</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Connect ChatGPT and/or Claude</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> One API key + OpenAI-compatible endpoint</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> OAuth-only, revoke anytime</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 24/7 VPS uptime + usage dashboard</li>
+        </ul>
+        <a href="#top" class="btn ghost">Start for $5</a>
+      </div>
+
+      <div class="plan pro">
+        <span class="ribbon">Most popular</span>
+        <div class="pname">Pro</div>
+        <div class="price"><span class="amt">$25</span><span class="per">/ month</span></div>
+        <p class="ptag">For power users running heavy automation, agents, and high-volume workloads.</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Everything in Starter</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Higher request limits for power users</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Multiple connected accounts</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Priority routing + detailed usage analytics</li>
+        </ul>
+        <a href="#top" class="btn">Go Pro →</a>
+      </div>
+    </div>
+    <p class="pricing-note">altkey is a thin proxy fee — you still need your own ChatGPT Plus and/or Claude subscription. Cancel altkey anytime.</p>
+  </div>
+</section>
+
+<!-- ================= TRUST ================= -->
+<section class="trust">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="seclabel">Security</span>
+      <h2>Your subscriptions stay yours.</h2>
+    </div>
+    <div class="trust-grid reveal">
+      <div class="trust-item">
+        <span class="ti-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <h3>OAuth only</h3>
+        <p>You log in on the provider's page and grant access. altkey only receives a scoped token.</p>
+      </div>
+      <div class="trust-item">
+        <span class="ti-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg></span>
+        <h3>No password storage</h3>
+        <p>We never see, ask for, or store your ChatGPT or Claude password. Ever.</p>
+      </div>
+      <div class="trust-item">
+        <span class="ti-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span>
+        <h3>No scraping</h3>
+        <p>Requests go through official authenticated channels — no headless browser tricks or session hijacking.</p>
+      </div>
+      <div class="trust-item">
+        <span class="ti-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
+        <h3>Revoke anytime</h3>
+        <p>Disconnect an account or rotate your key whenever you want. Access ends the moment you say so.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="seclabel">FAQ</span>
+      <h2>Straight answers.</h2>
+    </div>
+    <div class="accordion reveal" id="accordion">
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a1" id="q1">
+          What exactly does altkey do?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a1" role="region" aria-labelledby="q1">
+          <div class="acc-a-inner">altkey is a reverse proxy. You connect the AI subscriptions you already pay for — ChatGPT Plus and/or Claude — over OAuth. altkey then exposes them as a single API key on an OpenAI-compatible endpoint. When you call that key, altkey routes the request through your connected account, so you use your existing subscription's usage programmatically instead of paying separate per-token API rates.</div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a2" id="q2">
+          Do I still need a ChatGPT or Claude subscription?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a2" role="region" aria-labelledby="q2">
+          <div class="acc-a-inner">Yes. altkey doesn't resell access — it routes through the account you already own. You keep your ChatGPT Plus and/or Claude Pro plan, and altkey is a small monthly fee on top that turns those into a programmable API key.</div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a3" id="q3">
+          Which providers are supported?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a3" role="region" aria-labelledby="q3">
+          <div class="acc-a-inner">Today: OpenAI (ChatGPT) and Anthropic (Claude). You can connect one or both to the same key and pick models by name. More providers are coming soon.</div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a4" id="q4">
+          Is my login safe? Are you storing my password?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a4" role="region" aria-labelledby="q4">
+          <div class="acc-a-inner">No password is ever stored. Connection happens through OAuth, so you authorize on the provider's own login page and altkey only receives a scoped token. There's no scraping and no headless-browser session capture. You can revoke access or rotate your key at any time.</div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a5" id="q5">
+          Do I have to change my code?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a5" role="region" aria-labelledby="q5">
+          <div class="acc-a-inner">Barely. The endpoint is OpenAI-compatible, so you keep your existing OpenAI SDK or tooling and just change two things: the <code style="font-family:'JetBrains Mono',monospace;color:var(--lime)">base_url</code> to <code style="font-family:'JetBrains Mono',monospace;color:var(--lime)">https://api.altkey.dev/v1</code> and the API key to your <code style="font-family:'JetBrains Mono',monospace;color:var(--lime)">ak-…</code> key.</div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false" aria-controls="a6" id="q6">
+          How much does it cost and how reliable is it?
+          <span class="plus" aria-hidden="true"></span>
+        </button>
+        <div class="acc-a" id="a6" role="region" aria-labelledby="q6">
+          <div class="acc-a-inner">Two plans: Starter at $5/mo (connect one or both of your $20 plans, one API key) and Pro at $25/mo for power users who need higher limits and multiple accounts. Everything runs on dedicated VPS infrastructure with 24/7 uptime, so your key is online whenever your jobs are.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a href="#top" class="wordmark" aria-label="altkey home">altkey<span class="dot">.</span></a>
+        <p>Turn the AI subscriptions you already pay for into an API key.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h4>Product</h4>
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+          <a href="#pricing">Get your key</a>
+        </div>
+        <div class="foot-col">
+          <h4>Providers</h4>
+          <a href="#top">OpenAI / ChatGPT</a>
+          <a href="#top">Anthropic / Claude</a>
+          <a href="#top">More coming soon</a>
+        </div>
+        <div class="foot-col">
+          <h4>Legal</h4>
+          <a href="#top">Privacy</a>
+          <a href="#top">Terms</a>
+          <a href="#top">Security</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 altkey. Not affiliated with OpenAI or Anthropic.</span>
+      <span>You bring the subscription. We bring the key.</span>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- Mobile nav ---- */
+  var toggle = document.getElementById("navToggle");
+  var links = document.getElementById("navLinks");
+  toggle.addEventListener("click", function () {
+    var open = links.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  links.addEventListener("click", function (e) {
+    if (e.target.tagName === "A" && links.classList.contains("open")) {
+      links.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  /* ---- FAQ accordion ---- */
+  var qs = document.querySelectorAll(".acc-q");
+  qs.forEach(function (q) {
+    q.addEventListener("click", function () {
+      var expanded = q.getAttribute("aria-expanded") === "true";
+      var panel = document.getElementById(q.getAttribute("aria-controls"));
+      q.setAttribute("aria-expanded", expanded ? "false" : "true");
+      panel.style.maxHeight = expanded ? "0" : panel.scrollHeight + "px";
+    });
+  });
+
+  /* ---- Code tabs ---- */
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) {
+        t.setAttribute("aria-selected", "false");
+        var p = document.getElementById(t.getAttribute("aria-controls"));
+        p.classList.remove("active");
+        p.hidden = true;
+      });
+      tab.setAttribute("aria-selected", "true");
+      var panel = document.getElementById(tab.getAttribute("aria-controls"));
+      panel.classList.add("active");
+      panel.hidden = false;
+    });
+  });
+
+  /* ---- Copy to clipboard ---- */
+  var copyBtns = document.querySelectorAll(".copybtn");
+  copyBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = "code-" + btn.getAttribute("data-copy");
+      var el = document.getElementById(id);
+      if (!el) return;
+      var text = el.innerText;
+      var done = function () {
+        var prev = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("done");
+        setTimeout(function () { btn.textContent = prev; btn.classList.remove("done"); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallback(text, done); });
+      } else { fallback(text, done); }
+    });
+  });
+  function fallback(text, cb) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); cb(); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  /* ---- Scroll reveal ---- */
+  if ("IntersectionObserver" in window && !reduce) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ---- Kinetic headline on scroll ---- */
+  if (!reduce) {
+    var kin = document.querySelectorAll(".kinetic");
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        var y = window.scrollY || window.pageYOffset;
+        kin.forEach(function (k) {
+          var sp = parseFloat(k.getAttribute("data-speed")) || 0;
+          k.style.transform = "translateX(" + (y * sp) + "px)";
+        });
+        ticking = false;
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+})();
+</script>
+</body>
+</html>

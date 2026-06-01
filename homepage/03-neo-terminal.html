@@ -1,0 +1,1298 @@
+<!-- altkey landing — Design 03: Neo-Terminal -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>altkey — turn the AI subscriptions you already pay for into an API key</title>
+<meta name="description" content="altkey is a reverse proxy that turns your ChatGPT Plus and Claude subscriptions into one OpenAI-compatible API key. OAuth-only, no scraping, 24/7 uptime. Starts at $5/mo." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0A0E0A;
+    --bg-soft: #0D130D;
+    --bg-panel: #0F160F;
+    --bg-elev: #121A12;
+    --green: #4AF626;
+    --green-dim: #2f9e17;
+    --amber: #FFB627;
+    --text: #c7d8c0;
+    --text-mute: #7e947a;
+    --text-faint: #5b6f58;
+    --line: #1d2a1c;
+    --line-bright: #294026;
+    --red: #ff5f56;
+    --yellow: #ffbd2e;
+    --grn-dot: #27c93f;
+    --radius: 6px;
+    --maxw: 1120px;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* faint screen-glow vignette + scanline overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(74,246,38,0.05), transparent 55%),
+      radial-gradient(140% 120% at 50% 100%, rgba(0,0,0,0.55), transparent 60%);
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.16) 3px,
+      rgba(0,0,0,0) 4px
+    );
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::after { opacity: 0.3; }
+  }
+
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  :focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- buttons (bracketed terminal style) ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 11px 16px;
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--green);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease, border-color .12s ease, transform .05s ease;
+    white-space: nowrap;
+  }
+  .btn::before { content: "[ "; opacity: .7; }
+  .btn::after { content: " ]"; opacity: .7; }
+  .btn:hover { background: var(--green); color: var(--bg); text-decoration: none; }
+  .btn:active { transform: translateY(1px); }
+
+  .btn--primary {
+    background: var(--green);
+    color: var(--bg);
+    box-shadow: 0 0 0 0 rgba(74,246,38,0.0), 0 0 22px rgba(74,246,38,0.18);
+  }
+  .btn--primary:hover { background: var(--bg); color: var(--green); }
+
+  .btn--amber { border-color: var(--amber); color: var(--amber); }
+  .btn--amber:hover { background: var(--amber); color: var(--bg); }
+
+  .btn--ghost { border-color: var(--line-bright); color: var(--text); }
+  .btn--ghost:hover { background: var(--line-bright); color: var(--green); }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,14,10,0.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    gap: 16px;
+  }
+  .wordmark {
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--green);
+    letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .wordmark .caret { color: var(--amber); }
+  .wordmark:hover { text-decoration: none; }
+  .wordmark .blink { color: var(--green); animation: blink 1.1s steps(1) infinite; }
+
+  nav.links { display: flex; align-items: center; gap: 26px; }
+  nav.links a.navlink {
+    color: var(--text-mute);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  nav.links a.navlink::before { content: "› "; color: var(--text-faint); }
+  nav.links a.navlink:hover { color: var(--green); text-decoration: none; }
+  nav.links a.navlink:hover::before { color: var(--green); }
+
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+
+  .menu-btn {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--green);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .mobile-menu { display: none; }
+
+  @media (max-width: 820px) {
+    nav.links, .nav-cta .btn { display: none; }
+    .menu-btn { display: inline-flex; }
+    .mobile-menu {
+      display: none;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-soft);
+    }
+    .mobile-menu.open { display: block; }
+    .mobile-menu a {
+      display: block;
+      padding: 14px 24px;
+      color: var(--text);
+      border-top: 1px solid var(--line);
+      font-size: 15px;
+    }
+    .mobile-menu a::before { content: "$ "; color: var(--green-dim); }
+    .mobile-menu .btn { display: inline-flex; margin: 14px 24px 18px; }
+  }
+
+  /* ---------- section scaffolding ---------- */
+  section { padding: 88px 0; position: relative; }
+  .comment {
+    color: var(--green-dim);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    margin: 0 0 14px;
+    font-weight: 500;
+  }
+  .comment .tok { color: var(--text-faint); }
+  h2.sec-title {
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 800;
+    margin: 0 0 12px;
+    color: #e6f3e2;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .sec-sub {
+    color: var(--text-mute);
+    max-width: 620px;
+    margin: 0 0 44px;
+    font-size: 15px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 64px 0 72px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1.1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-bright);
+    color: var(--text-mute);
+    border-radius: 100px;
+    padding: 5px 13px;
+    font-size: 12.5px;
+    margin-bottom: 24px;
+  }
+  .badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  h1.hero-h {
+    font-size: clamp(32px, 5.2vw, 54px);
+    line-height: 1.08;
+    font-weight: 800;
+    margin: 0 0 20px;
+    letter-spacing: -0.02em;
+    color: #eaf7e6;
+  }
+  h1.hero-h .hi { color: var(--green); }
+  h1.hero-h .amber { color: var(--amber); }
+  .hero-sub {
+    font-size: 17px;
+    color: var(--text-mute);
+    max-width: 520px;
+    margin: 0 0 30px;
+    line-height: 1.6;
+  }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+  .hero-meta {
+    display: flex; flex-wrap: wrap; gap: 18px;
+    color: var(--text-faint); font-size: 12.5px;
+  }
+  .hero-meta span::before { content: "✓ "; color: var(--green); }
+
+  /* ---------- terminal window ---------- */
+  .term {
+    background: linear-gradient(180deg, #0c120c, #0a0e0a);
+    border: 1px solid var(--line-bright);
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(74,246,38,0.05), 0 24px 60px rgba(0,0,0,0.6), 0 0 50px rgba(74,246,38,0.06);
+    overflow: hidden;
+  }
+  .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    background: #0e150e;
+    border-bottom: 1px solid var(--line);
+  }
+  .tl { width: 12px; height: 12px; border-radius: 50%; }
+  .tl.r { background: var(--red); }
+  .tl.y { background: var(--yellow); }
+  .tl.g { background: var(--grn-dot); }
+  .term-title {
+    flex: 1;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 12.5px;
+    margin-right: 44px;
+    letter-spacing: 0.02em;
+  }
+  .term-body {
+    padding: 18px 18px 22px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    min-height: 300px;
+  }
+  .term-body .line { white-space: pre-wrap; word-break: break-word; }
+  .prompt { color: var(--green); }
+  .prompt .path { color: var(--amber); }
+  .cmd { color: #eaf7e6; }
+  .flag { color: var(--amber); }
+  .out { color: var(--text-mute); }
+  .ok { color: var(--green); }
+  .dim { color: var(--text-faint); }
+  .url { color: var(--amber); text-decoration: underline; text-underline-offset: 2px; }
+  .cursor {
+    display: inline-block;
+    width: 9px; height: 1.1em;
+    background: var(--green);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 1.05s steps(1) infinite;
+  }
+  .hidden-line { display: none; }
+
+  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+  /* ---------- providers strip ---------- */
+  .providers {
+    padding: 30px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-soft);
+  }
+  .prov-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 18px 40px;
+  }
+  .prov-label { color: var(--text-faint); font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .prov {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .prov svg { display: block; }
+  .prov .sub { color: var(--text-faint); font-weight: 400; font-size: 13px; }
+  .prov-soon {
+    color: var(--text-faint);
+    font-size: 13px;
+    border: 1px dashed var(--line-bright);
+    border-radius: 100px;
+    padding: 4px 12px;
+  }
+
+  /* ---------- how it works ---------- */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .step {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 22px;
+    position: relative;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .step:hover { border-color: var(--line-bright); transform: translateY(-3px); }
+  .step .num {
+    color: var(--green);
+    font-weight: 800;
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: inline-block;
+  }
+  .step .num::before { content: "$ "; color: var(--green-dim); }
+  .step h3 { margin: 0 0 8px; font-size: 17px; color: #e6f3e2; font-weight: 700; }
+  .step p { margin: 0; color: var(--text-mute); font-size: 14px; }
+  .step .arrow {
+    position: absolute;
+    right: -16px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--green-dim);
+    font-size: 18px;
+    z-index: 2;
+  }
+  .step:last-child .arrow { display: none; }
+
+  /* ---------- code showcase ---------- */
+  .code-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 22px;
+  }
+  .code-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line-bright);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #0e150e;
+    border-bottom: 1px solid var(--line);
+  }
+  .code-head .fname { color: var(--text-mute); font-size: 12.5px; }
+  .code-head .fname::before { content: "● "; color: var(--amber); }
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--text-mute);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .copy-btn:hover { border-color: var(--green); color: var(--green); }
+  .copy-btn.copied { border-color: var(--green); color: var(--bg); background: var(--green); }
+  pre {
+    margin: 0;
+    padding: 18px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    flex: 1;
+  }
+  pre code { font-family: var(--mono); white-space: pre; }
+  .c-kw { color: var(--amber); }
+  .c-fn { color: var(--green); }
+  .c-str { color: #b8e8a8; }
+  .c-var { color: #eaf7e6; }
+  .c-com { color: var(--text-faint); font-style: italic; }
+  .c-pun { color: var(--text-mute); }
+  .c-num { color: var(--amber); }
+
+  /* ---------- features ---------- */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .feat {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .feat:hover { border-color: var(--green-dim); background: var(--bg-elev); }
+  .feat .ico {
+    color: var(--green);
+    margin-bottom: 14px;
+    display: inline-flex;
+    width: 38px; height: 38px;
+    align-items: center; justify-content: center;
+    border: 1px solid var(--line-bright);
+    border-radius: 7px;
+  }
+  .feat h3 { margin: 0 0 7px; font-size: 15.5px; color: #e6f3e2; font-weight: 700; }
+  .feat p { margin: 0; color: var(--text-mute); font-size: 13.5px; line-height: 1.6; }
+
+  /* ---------- pricing ---------- */
+  .price-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+    max-width: 820px;
+  }
+  .plan {
+    background: var(--bg-panel);
+    border: 1px solid var(--line-bright);
+    border-radius: 10px;
+    padding: 30px 28px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .plan.featured {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green-dim), 0 0 40px rgba(74,246,38,0.08);
+  }
+  .plan .tag {
+    position: absolute;
+    top: -11px; left: 28px;
+    background: var(--green);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 11px;
+    border-radius: 100px;
+    text-transform: uppercase;
+  }
+  .plan .pname { font-size: 14px; color: var(--amber); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px; }
+  .plan .pname::before { content: "# "; color: var(--text-faint); }
+  .plan .price { font-size: 42px; font-weight: 800; color: #eaf7e6; line-height: 1; }
+  .plan .price span { font-size: 15px; color: var(--text-faint); font-weight: 400; }
+  .plan .pdesc { color: var(--text-mute); font-size: 13.5px; margin: 12px 0 22px; min-height: 40px; }
+  .plan ul { list-style: none; margin: 0 0 26px; padding: 0; flex: 1; }
+  .plan li { padding: 7px 0; color: var(--text); font-size: 14px; border-bottom: 1px dashed var(--line); }
+  .plan li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+  .plan li:last-child { border-bottom: none; }
+  .plan .btn { width: 100%; justify-content: center; }
+  .price-note { color: var(--text-faint); font-size: 13px; margin-top: 20px; }
+
+  /* ---------- trust band ---------- */
+  .trust {
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .trust-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.4fr;
+    gap: 44px;
+    align-items: center;
+  }
+  .trust-list { display: grid; gap: 14px; }
+  .trust-item { display: flex; gap: 13px; align-items: flex-start; }
+  .trust-item .tk { color: var(--green); flex-shrink: 0; margin-top: 2px; }
+  .trust-item strong { color: #e6f3e2; font-weight: 700; }
+  .trust-item p { margin: 2px 0 0; color: var(--text-mute); font-size: 13.5px; }
+  .ascii-key {
+    color: var(--green-dim);
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: pre;
+    overflow-x: auto;
+    text-shadow: 0 0 12px rgba(74,246,38,0.25);
+  }
+
+  /* ---------- faq ---------- */
+  .faq { max-width: 800px; }
+  .acc-item { border-bottom: 1px solid var(--line); }
+  .acc-q {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    padding: 20px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+  }
+  .acc-q:hover { color: var(--green); }
+  .acc-q .qmark { color: var(--green-dim); margin-right: 10px; }
+  .acc-q .chev {
+    color: var(--green);
+    font-size: 14px;
+    transition: transform .2s ease;
+    flex-shrink: 0;
+  }
+  .acc-q[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .acc-a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .25s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .acc-a { transition: none; }
+    .acc-q .chev { transition: none; }
+  }
+  .acc-a-inner {
+    padding: 0 4px 22px 26px;
+    color: var(--text-mute);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .acc-a-inner::before { content: "> "; color: var(--amber); }
+
+  /* ---------- final cta ---------- */
+  .final {
+    text-align: center;
+    border-top: 1px solid var(--line);
+  }
+  .final h2 { font-size: clamp(28px, 4.5vw, 42px); margin: 0 0 16px; color: #eaf7e6; font-weight: 800; letter-spacing: -0.01em; }
+  .final p { color: var(--text-mute); max-width: 540px; margin: 0 auto 28px; }
+  .final .hero-cta { justify-content: center; }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    background: var(--bg-soft);
+    padding: 48px 0 36px;
+  }
+  .foot-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 30px;
+    margin-bottom: 34px;
+  }
+  .foot-col h4 { color: var(--text-faint); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 14px; }
+  .foot-col a { display: block; color: var(--text-mute); font-size: 14px; padding: 4px 0; }
+  .foot-col a:hover { color: var(--green); }
+  .foot-brand { max-width: 280px; }
+  .foot-brand p { color: var(--text-faint); font-size: 13px; margin: 12px 0 0; }
+  .foot-bottom {
+    border-top: 1px solid var(--line);
+    padding-top: 22px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--text-faint);
+    font-size: 12.5px;
+  }
+  .foot-bottom .legal a { color: var(--text-faint); }
+  .foot-bottom .legal a:hover { color: var(--green); }
+
+  /* ---------- reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; }
+    .steps { grid-template-columns: 1fr; }
+    .step .arrow { display: none; }
+    .code-grid { grid-template-columns: 1fr; }
+    .feat-grid { grid-template-columns: repeat(2, 1fr); }
+    .price-grid { grid-template-columns: 1fr; }
+    .trust-grid { grid-template-columns: 1fr; gap: 30px; }
+  }
+  @media (max-width: 560px) {
+    section { padding: 64px 0; }
+    .feat-grid { grid-template-columns: 1fr; }
+    .hero-cta .btn, .final .btn { width: 100%; justify-content: center; }
+    .wrap { padding: 0 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="wordmark" aria-label="altkey home">
+      <span class="caret">$</span>&nbsp;altkey<span class="blink">_</span>
+    </a>
+    <nav class="links" aria-label="Primary">
+      <a class="navlink" href="#how">How it works</a>
+      <a class="navlink" href="#pricing">Pricing</a>
+      <a class="navlink" href="#faq">FAQ</a>
+      <a class="navlink" href="#code">Docs</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn--primary" href="#pricing">get your key</a>
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu">≡</button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="#code">Docs</a>
+    <a class="btn btn--primary" href="#pricing">get your key</a>
+  </div>
+</header>
+
+<a id="top"></a>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="reveal in">
+      <span class="badge"><span class="dot"></span> OpenAI &amp; Anthropic supported · more coming soon</span>
+      <h1 class="hero-h">Turn the AI subscriptions you <span class="hi">already pay for</span> into an <span class="amber">API key</span>.</h1>
+      <p class="hero-sub">altkey is a reverse proxy. Connect your ChatGPT Plus or Claude account with OAuth, and we hand you one API key on an OpenAI-compatible endpoint — your requests run on the subscription you already have.</p>
+      <div class="hero-cta">
+        <a class="btn btn--primary" href="#pricing">get your key</a>
+        <a class="btn btn--ghost" href="#how">connect an account</a>
+      </div>
+      <div class="hero-meta">
+        <span>OAuth-only, no passwords</span>
+        <span>No per-token API rates</span>
+        <span>Revoke anytime</span>
+      </div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="reveal in">
+      <div class="term" role="img" aria-label="Terminal showing: altkey connect --provider claude, an OAuth success message, and an exported OPENAI_BASE_URL environment variable.">
+        <div class="term-bar">
+          <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+          <span class="term-title">altkey — zsh — 80×24</span>
+        </div>
+        <div class="term-body" id="termBody" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROVIDERS ============ -->
+<div class="providers">
+  <div class="wrap prov-inner">
+    <span class="prov-label">Connect</span>
+    <span class="prov">
+      <!-- OpenAI mark -->
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21.5 10.1a5.4 5.4 0 0 0-.46-4.43 5.45 5.45 0 0 0-5.87-2.62A5.42 5.42 0 0 0 6.1 4.9a5.4 5.4 0 0 0-3.6 2.62 5.45 5.45 0 0 0 .67 6.38 5.4 5.4 0 0 0 .46 4.43 5.45 5.45 0 0 0 5.87 2.62 5.4 5.4 0 0 0 4.08 1.82 5.45 5.45 0 0 0 5.2-3.78 5.4 5.4 0 0 0 3.6-2.62 5.45 5.45 0 0 0-.67-6.38Z" stroke="#4AF626" stroke-width="1.3"/>
+        <path d="M12 7.2 16 9.5v4.6L12 16.4 8 14.1V9.5L12 7.2Z" stroke="#4AF626" stroke-width="1.1"/>
+      </svg>
+      OpenAI <span class="sub">/ ChatGPT</span>
+    </span>
+    <span class="prov">
+      <!-- Anthropic / Claude mark -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9.3 4.5 4 19.5h2.9l1.1-3.5h5.9l1.1 3.5H18L12.7 4.5H9.3Zm-.2 8.9 1.9-6 1.9 6H9.1Z" fill="#FFB627"/>
+      </svg>
+      Anthropic <span class="sub">/ Claude</span>
+    </span>
+    <span class="prov-soon">+ more coming soon</span>
+  </div>
+</div>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how">
+  <div class="wrap">
+    <p class="comment reveal"><span class="tok">//</span> how it works</p>
+    <h2 class="sec-title reveal">Three commands from subscription to API key.</h2>
+    <p class="sec-sub reveal">No scraping, no browser automation, no sharing passwords. You authorize altkey through the provider's own OAuth flow — and you're done.</p>
+    <div class="steps">
+      <div class="step reveal">
+        <span class="arrow">→</span>
+        <span class="num">01 · connect</span>
+        <h3>Log in with OAuth</h3>
+        <p>Authorize altkey through ChatGPT and/or Claude's official OAuth screen. We never see or store your password.</p>
+      </div>
+      <div class="step reveal">
+        <span class="arrow">→</span>
+        <span class="num">02 · get key</span>
+        <h3>Receive one API key</h3>
+        <p>altkey issues a single <code>ak-…</code> key and an OpenAI-compatible base URL that fronts every account you connected.</p>
+      </div>
+      <div class="step reveal">
+        <span class="num">03 · send</span>
+        <h3>Send requests</h3>
+        <p>Call the endpoint from any OpenAI SDK. altkey proxies each request through your account, billed to your existing subscription.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CODE SHOWCASE ============ -->
+<section id="code" style="padding-top:0;">
+  <div class="wrap">
+    <p class="comment reveal"><span class="tok">#</span> drop-in: change two lines</p>
+    <h2 class="sec-title reveal">It's the OpenAI SDK. Just point it at altkey.</h2>
+    <p class="sec-sub reveal">Same request shapes, same response shapes. Swap your <code>base_url</code> and <code>api_key</code> and ship — works with the Python &amp; Node SDKs, LangChain, or plain curl.</p>
+
+    <div class="code-grid">
+      <!-- Python -->
+      <div class="code-card reveal">
+        <div class="code-head">
+          <span class="fname">quickstart.py</span>
+          <button class="copy-btn" data-copy="py">copy</button>
+        </div>
+<pre id="code-py"><code><span class="c-kw">from</span> <span class="c-var">openai</span> <span class="c-kw">import</span> <span class="c-var">OpenAI</span>
+
+<span class="c-com"># point the SDK at altkey — that's the whole change</span>
+<span class="c-var">client</span> <span class="c-pun">=</span> <span class="c-fn">OpenAI</span><span class="c-pun">(</span>
+    <span class="c-var">base_url</span><span class="c-pun">=</span><span class="c-str">"https://api.altkey.dev/v1"</span><span class="c-pun">,</span>
+    <span class="c-var">api_key</span><span class="c-pun">=</span><span class="c-str">"ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY"</span><span class="c-pun">,</span>
+<span class="c-pun">)</span>
+
+<span class="c-var">resp</span> <span class="c-pun">=</span> <span class="c-var">client</span><span class="c-pun">.</span><span class="c-var">chat</span><span class="c-pun">.</span><span class="c-var">completions</span><span class="c-pun">.</span><span class="c-fn">create</span><span class="c-pun">(</span>
+    <span class="c-var">model</span><span class="c-pun">=</span><span class="c-str">"gpt-4o"</span><span class="c-pun">,</span>  <span class="c-com"># or "claude-3-7-sonnet"</span>
+    <span class="c-var">messages</span><span class="c-pun">=</span><span class="c-pun">[</span>
+        <span class="c-pun">{</span><span class="c-str">"role"</span><span class="c-pun">:</span> <span class="c-str">"user"</span><span class="c-pun">,</span> <span class="c-str">"content"</span><span class="c-pun">:</span> <span class="c-str">"Ship it."</span><span class="c-pun">}</span><span class="c-pun">,</span>
+    <span class="c-pun">]</span><span class="c-pun">,</span>
+<span class="c-pun">)</span>
+
+<span class="c-fn">print</span><span class="c-pun">(</span><span class="c-var">resp</span><span class="c-pun">.</span><span class="c-var">choices</span><span class="c-pun">[</span><span class="c-num">0</span><span class="c-pun">]</span><span class="c-pun">.</span><span class="c-var">message</span><span class="c-pun">.</span><span class="c-var">content</span><span class="c-pun">)</span>
+<span class="c-com"># → runs on YOUR ChatGPT / Claude subscription</span></code></pre>
+      </div>
+
+      <!-- curl -->
+      <div class="code-card reveal">
+        <div class="code-head">
+          <span class="fname">curl.sh</span>
+          <button class="copy-btn" data-copy="curl">copy</button>
+        </div>
+<pre id="code-curl"><code><span class="c-com"># same key, same endpoint, from anywhere</span>
+<span class="c-fn">curl</span> <span class="c-str">https://api.altkey.dev/v1/chat/completions</span> <span class="c-pun">\</span>
+  <span class="c-kw">-H</span> <span class="c-str">"Authorization: Bearer ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY"</span> <span class="c-pun">\</span>
+  <span class="c-kw">-H</span> <span class="c-str">"Content-Type: application/json"</span> <span class="c-pun">\</span>
+  <span class="c-kw">-d</span> <span class="c-str">'{</span>
+<span class="c-str">    "model": "claude-3-7-sonnet",</span>
+<span class="c-str">    "messages": [</span>
+<span class="c-str">      { "role": "user", "content": "Hello, altkey." }</span>
+<span class="c-str">    ]</span>
+<span class="c-str">  }'</span>
+
+<span class="c-com"># or just export it and forget it:</span>
+<span class="c-kw">export</span> <span class="c-var">OPENAI_BASE_URL</span><span class="c-pun">=</span><span class="c-str">"https://api.altkey.dev/v1"</span>
+<span class="c-kw">export</span> <span class="c-var">OPENAI_API_KEY</span><span class="c-pun">=</span><span class="c-str">"ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY"</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="features">
+  <div class="wrap">
+    <p class="comment reveal"><span class="tok">//</span> what you get</p>
+    <h2 class="sec-title reveal">Built for developers who already pay for AI.</h2>
+    <p class="sec-sub reveal">Everything you need to use the subscriptions you have — programmatically, reliably, and without a second bill.</p>
+    <div class="feat-grid">
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3>OpenAI-compatible drop-in</h3>
+        <p>Keep your existing code. Change <code>base_url</code> and <code>api_key</code> — every OpenAI SDK and tool just works.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3>OAuth-only, no passwords</h3>
+        <p>You authorize through the provider's own login. We never store credentials and never scrape the web UI.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="8" r="1" fill="currentColor"/></svg>
+        </span>
+        <h3>24/7 VPS uptime</h3>
+        <p>Hosted on dedicated VPS infrastructure — always online, no cold starts, no shared rate-limit roulette.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3>Your own subscription limits</h3>
+        <p>Requests count against the plan you already pay for — no surprise per-token invoices stacking up beside it.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M4 12l4-4M4 12l4 4M20 6l-4 0M20 18l-6 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3>One endpoint, both providers</h3>
+        <p>Connect ChatGPT and Claude, route to either by model name through a single key and a single base URL.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 15l3-3 2 2 4-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3>Usage dashboard</h3>
+        <p>See requests, models, and per-account activity in one place — so you always know what's flowing through your key.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section id="pricing">
+  <div class="wrap">
+    <p class="comment reveal"><span class="tok">#</span> pricing</p>
+    <h2 class="sec-title reveal">Pay for altkey, not for tokens.</h2>
+    <p class="sec-sub reveal">Flat monthly access. Your AI usage stays on the subscription you already pay the providers for.</p>
+
+    <div class="price-grid">
+      <!-- Starter -->
+      <div class="plan reveal">
+        <div class="pname">starter</div>
+        <div class="price">$5<span>/mo</span></div>
+        <p class="pdesc">For people on the $20 Claude Pro and/or ChatGPT Plus plan who want programmatic access.</p>
+        <ul>
+          <li>Connect ChatGPT and/or Claude</li>
+          <li>One API key, one endpoint</li>
+          <li>OpenAI-compatible API</li>
+          <li>Standard request throughput</li>
+          <li>Usage dashboard</li>
+          <li>Revoke access anytime</li>
+        </ul>
+        <a class="btn btn--ghost" href="#top">start for $5</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="plan featured reveal">
+        <span class="tag">most popular</span>
+        <div class="pname">pro</div>
+        <div class="price">$25<span>/mo</span></div>
+        <p class="pdesc">For power users running agents, pipelines, and high-volume workloads through their accounts.</p>
+        <ul>
+          <li>Everything in Starter</li>
+          <li>Higher request limits &amp; concurrency</li>
+          <li>Priority routing on VPS infra</li>
+          <li>Multiple keys for projects</li>
+          <li>Detailed usage analytics</li>
+          <li>Priority support</li>
+        </ul>
+        <a class="btn btn--primary" href="#top">get your key</a>
+      </div>
+    </div>
+    <p class="price-note reveal">// You still need your own ChatGPT Plus / Claude Pro subscription. altkey is the proxy layer — the AI usage runs on your plan.</p>
+  </div>
+</section>
+
+<!-- ============ TRUST / SECURITY ============ -->
+<div class="trust">
+  <section style="padding:72px 0;">
+    <div class="wrap trust-grid">
+      <div class="reveal">
+        <p class="comment"><span class="tok">//</span> security</p>
+        <h2 class="sec-title">Your subscriptions stay yours.</h2>
+        <p class="sec-sub" style="margin-bottom:24px;">altkey is OAuth-only by design. We hold an authorization token you can revoke at any time — never a password, never a scraped session.</p>
+        <pre class="ascii-key" aria-hidden="true">   ___       _ _   _
+  / _ \  ___| | |_| | _____ _   _
+ | | | |/ _ \ | __| |/ / _ \ | | |
+ | |_| |  __/ | |_|   <  __/ |_| |
+  \___/ \___|_|\__|_|\_\___|\__, |
+   [ oauth ]──[ token ]──   |___/</pre>
+      </div>
+      <div class="trust-list reveal">
+        <div class="trust-item">
+          <span class="tk" aria-hidden="true">▹</span>
+          <div><strong>OAuth-only authentication.</strong><p>You log in on the provider's own page. altkey never sees your username or password.</p></div>
+        </div>
+        <div class="trust-item">
+          <span class="tk" aria-hidden="true">▹</span>
+          <div><strong>No password storage.</strong><p>We store a revocable authorization token — not credentials. Nothing to leak that could log into your account.</p></div>
+        </div>
+        <div class="trust-item">
+          <span class="tk" aria-hidden="true">▹</span>
+          <div><strong>No scraping, no automation.</strong><p>Requests go through official authorized channels, not by driving a hidden browser session.</p></div>
+        </div>
+        <div class="trust-item">
+          <span class="tk" aria-hidden="true">▹</span>
+          <div><strong>Revoke anytime.</strong><p>Pull access from altkey or from your provider's settings whenever you want. Your accounts stay fully under your control.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ FAQ ============ -->
+<section id="faq">
+  <div class="wrap faq">
+    <p class="comment reveal"><span class="tok">//</span> faq</p>
+    <h2 class="sec-title reveal">Questions, answered straight.</h2>
+    <p class="sec-sub reveal">No fine-print games. Here's exactly how altkey works.</p>
+
+    <div class="reveal">
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>How is it billed?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">You pay altkey a flat monthly fee — $5 for Starter or $25 for Pro — for access to the proxy. Your actual AI usage runs on the ChatGPT Plus or Claude Pro subscription you already pay the providers for. There are no per-token API charges from altkey.</div></div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>Which providers are supported?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">Today you can connect OpenAI (ChatGPT) and Anthropic (Claude) — one or both. You route to either by model name through a single key and endpoint. More providers are coming soon.</div></div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>Is my login safe? How does OAuth work here?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">Yes. altkey is OAuth-only. You authorize through the provider's own login screen, and we receive a revocable authorization token — never your password. We don't store credentials and we don't scrape the web UI.</div></div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>Can I revoke access?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">Anytime. Disconnect an account from your altkey dashboard, or revoke the authorization directly in your provider's account settings. The moment you do, altkey can no longer route requests through that account.</div></div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>What's the difference vs. the official API?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">The official OpenAI and Anthropic APIs bill you separately, per token, on top of any subscription. altkey lets you use the subscription you already pay for — programmatically — through an OpenAI-compatible endpoint, so you're not paying twice for access to the same models.</div></div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-q" aria-expanded="false">
+          <span><span class="qmark">?</span>Is there a free trial?</span>
+          <span class="chev" aria-hidden="true">▶</span>
+        </button>
+        <div class="acc-a"><div class="acc-a-inner">altkey starts at just $5/mo, low enough to try with no real commitment. Connect an account, generate a key, and if it's not for you, cancel and revoke access at any time — no lock-in.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final">
+  <div class="wrap">
+    <p class="comment reveal" style="text-align:center;"><span class="tok">$</span> altkey connect --provider you</p>
+    <h2 class="reveal">Stop paying twice for the same models.</h2>
+    <p class="reveal">Connect the account you already have, get one API key, and start sending requests in minutes.</p>
+    <div class="hero-cta reveal">
+      <a class="btn btn--primary" href="#pricing">get your key</a>
+      <a class="btn btn--amber" href="#how">connect an account</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="#top" class="wordmark"><span class="caret">$</span>&nbsp;altkey<span class="blink">_</span></a>
+        <p>Turn the AI subscriptions you already pay for into an API key. OAuth-only. OpenAI-compatible. Always on.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#code">Docs</a>
+      </div>
+      <div class="foot-col">
+        <h4>Connect</h4>
+        <a href="#pricing">OpenAI / ChatGPT</a>
+        <a href="#pricing">Anthropic / Claude</a>
+        <a href="#faq">More coming soon</a>
+      </div>
+      <div class="foot-col">
+        <h4>Company</h4>
+        <a href="#faq">FAQ</a>
+        <a href="#trust">Security</a>
+        <a href="mailto:hello@altkey.dev">Contact</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 altkey. Not affiliated with OpenAI or Anthropic.</span>
+      <span class="legal">
+        <a href="#">Terms</a> · <a href="#">Privacy</a> · <a href="#">Acceptable use</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- mobile nav ---------- */
+  var menuBtn = document.getElementById("menuBtn");
+  var mobileMenu = document.getElementById("mobileMenu");
+  if (menuBtn && mobileMenu) {
+    menuBtn.addEventListener("click", function () {
+      var open = mobileMenu.classList.toggle("open");
+      menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    mobileMenu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () {
+        mobileMenu.classList.remove("open");
+        menuBtn.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  /* ---------- FAQ accordion ---------- */
+  document.querySelectorAll(".acc-q").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var expanded = btn.getAttribute("aria-expanded") === "true";
+      var panel = btn.nextElementSibling;
+      btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+      if (expanded) {
+        panel.style.maxHeight = null;
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+      }
+    });
+  });
+
+  /* ---------- copy to clipboard ---------- */
+  var snippets = {
+    py: 'from openai import OpenAI\n\nclient = OpenAI(\n    base_url="https://api.altkey.dev/v1",\n    api_key="ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY",\n)\n\nresp = client.chat.completions.create(\n    model="gpt-4o",  # or "claude-3-7-sonnet"\n    messages=[\n        {"role": "user", "content": "Ship it."},\n    ],\n)\n\nprint(resp.choices[0].message.content)',
+    curl: 'curl https://api.altkey.dev/v1/chat/completions \\\n  -H "Authorization: Bearer ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY" \\\n  -H "Content-Type: application/json" \\\n  -d \'{\n    "model": "claude-3-7-sonnet",\n    "messages": [\n      { "role": "user", "content": "Hello, altkey." }\n    ]\n  }\'\n\nexport OPENAI_BASE_URL="https://api.altkey.dev/v1"\nexport OPENAI_API_KEY="ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY"'
+  };
+  document.querySelectorAll(".copy-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var key = btn.getAttribute("data-copy");
+      var text = snippets[key] || "";
+      var done = function () {
+        var orig = "copy";
+        btn.textContent = "copied ✓";
+        btn.classList.add("copied");
+        setTimeout(function () {
+          btn.textContent = orig;
+          btn.classList.remove("copied");
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text); done(); });
+      } else {
+        fallback(text); done();
+      }
+    });
+  });
+  function fallback(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- scroll reveal ---------- */
+  var reveals = document.querySelectorAll(".reveal:not(.in)");
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    reveals.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add("in");
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    reveals.forEach(function (el) { io.observe(el); });
+  }
+
+  /* ---------- hero terminal typewriter ---------- */
+  var term = document.getElementById("termBody");
+  if (term) {
+    var prompt = '<span class="prompt"><span class="path">~/dev</span> $</span> ';
+    // Sequence of "events": type a command, or print output lines.
+    var script = [
+      { type: "type", html: prompt, raw: "", instant: true },
+      { type: "type", html: prompt, raw: 'altkey connect --provider claude', cls: "cmd", flagWords: ["--provider"] },
+      { type: "out", lines: [
+        '<span class="dim">→ opening browser for OAuth…</span>',
+        '<span class="ok">✓ authorized claude (anthropic) as you@dev.io</span>',
+        '<span class="out">  scope: chat.completions · token stored (revocable)</span>',
+        ''
+      ]},
+      { type: "type", html: prompt, raw: 'altkey keys create', cls: "cmd" },
+      { type: "out", lines: [
+        '<span class="ok">✓ key created</span>',
+        '<span class="out">  ak-live-7Qp3xV9rJ2mK8nB4cD6sT1wY</span>',
+        ''
+      ]},
+      { type: "type", html: prompt, raw: 'export OPENAI_BASE_URL=https://api.altkey.dev/v1', cls: "cmd", urlPart: "https://api.altkey.dev/v1" },
+      { type: "out", lines: [
+        '<span class="dim"># you\'re live — point any OpenAI SDK here</span>',
+        ''
+      ]},
+      { type: "final" }
+    ];
+
+    var finalHTML = '';
+    // Build the fully-rendered final state (used for reduced motion + a11y).
+    function renderCommandLine(raw, cls, opts) {
+      opts = opts || {};
+      var inner = raw;
+      if (opts.flagWords) {
+        opts.flagWords.forEach(function (f) {
+          inner = inner.replace(f, '<span class="flag">' + f + '</span>');
+        });
+      }
+      if (opts.urlPart) {
+        inner = inner.replace(opts.urlPart, '<span class="url">' + opts.urlPart + '</span>');
+      }
+      return '<div class="line">' + prompt + '<span class="' + (cls || 'cmd') + '">' + inner + '</span></div>';
+    }
+    script.forEach(function (s) {
+      if (s.type === "type" && s.raw) {
+        finalHTML += renderCommandLine(s.raw, s.cls, { flagWords: s.flagWords, urlPart: s.urlPart });
+      } else if (s.type === "out") {
+        s.lines.forEach(function (l) { finalHTML += '<div class="line">' + l + '</div>'; });
+      }
+    });
+    finalHTML += '<div class="line"><span class="prompt"><span class="path">~/dev</span> $</span> <span class="cursor"></span></div>';
+
+    if (reduceMotion) {
+      term.innerHTML = finalHTML;
+    } else {
+      runTypewriter();
+    }
+
+    function runTypewriter() {
+      var idx = 0;
+      var buffer = ""; // committed HTML
+      var cursorSpan = '<span class="cursor"></span>';
+
+      function setContent(active) {
+        term.innerHTML = buffer + (active || "");
+        term.scrollTop = term.scrollHeight;
+      }
+
+      function next() {
+        if (idx >= script.length) return;
+        var step = script[idx++];
+
+        if (step.type === "final") {
+          buffer += '<div class="line"><span class="prompt"><span class="path">~/dev</span> $</span> ' + cursorSpan + '</div>';
+          setContent("");
+          return;
+        }
+
+        if (step.type === "out") {
+          // print output lines quickly, one per tick
+          var li = 0;
+          (function printLine() {
+            if (li >= step.lines.length) { setTimeout(next, 160); return; }
+            buffer += '<div class="line">' + step.lines[li++] + '</div>';
+            setContent("");
+            setTimeout(printLine, 90);
+          })();
+          return;
+        }
+
+        if (step.type === "type") {
+          if (step.instant || !step.raw) {
+            // just establish the prompt nothing typed
+            setTimeout(next, 250);
+            return;
+          }
+          var raw = step.raw;
+          var i = 0;
+          (function typeChar() {
+            var typed = raw.slice(0, i);
+            // syntax-highlight what's typed so far (lightweight)
+            var shown = typed;
+            if (step.flagWords) {
+              step.flagWords.forEach(function (f) {
+                if (typed.indexOf(f) !== -1) shown = shown.replace(f, '<span class="flag">' + f + '</span>');
+              });
+            }
+            if (step.urlPart && typed.indexOf(step.urlPart) !== -1) {
+              shown = shown.replace(step.urlPart, '<span class="url">' + step.urlPart + '</span>');
+            }
+            var activeLine = '<div class="line">' + prompt + '<span class="' + (step.cls || 'cmd') + '">' + shown + '</span>' + cursorSpan + '</div>';
+            setContent(activeLine);
+            if (i < raw.length) {
+              i++;
+              setTimeout(typeChar, 32 + Math.random() * 34);
+            } else {
+              // commit the finished command line, drop cursor
+              buffer += renderCommandLine(raw, step.cls, { flagWords: step.flagWords, urlPart: step.urlPart });
+              setContent("");
+              setTimeout(next, 420);
+            }
+          })();
+        }
+      }
+      next();
+    }
+  }
+})();
+</script>
+</body>
+</html>
