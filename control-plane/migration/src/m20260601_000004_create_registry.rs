@@ -6,6 +6,7 @@ pub struct Migration;
 #[derive(DeriveIden)]
 enum Handle { Table, Id, AccountId, Name, Status, CreatedAt }
 #[derive(DeriveIden)]
+#[allow(clippy::enum_variant_names)] // variant names map 1:1 to SQL columns
 enum Agent { Table, Id, AccountId, HandleId, Name, AgentTokenHash, TokenPrefix, Status, CreatedAt, LastSeenAt }
 #[derive(DeriveIden)]
 enum EndpointKey { Table, Id, AccountId, AgentId, KeyHash, KeyPrefix, Name, CreatedAt, LastUsedAt, RevokedAt }
