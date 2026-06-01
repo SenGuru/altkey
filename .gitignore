@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .venv/
 local/.venv/
+.gstack/
+control-plane.db
+control-plane.db-journal
+control-plane.db-wal
+*.db-wal
+*.db-journal

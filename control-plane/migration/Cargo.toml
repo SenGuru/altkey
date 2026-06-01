@@ -1,0 +1,12 @@
+[package]
+name = "control-plane-migration"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "migration"
+path = "src/lib.rs"
+
+[dependencies]
+sea-orm-migration = { version = "1", features = ["runtime-tokio-rustls", "sqlx-postgres", "sqlx-sqlite"] }
+async-trait = "0.1"
