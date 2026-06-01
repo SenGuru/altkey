@@ -52,8 +52,16 @@ The Rust engine in `engine/` (Phase 1, already built). Headless.
 - **NEW:** a **license/key check** — before serving a request, confirms the
   presented endpoint key is valid and the account's subscription is active, by asking
   the control plane (cached, with an offline grace window).
+- **NEW (the "just works" piece):** **transparent mode** — the agent can intercept
+  `api.openai.com` / `api.anthropic.com` *on the local machine* (a hosts/DNS redirect
+  to the agent + a locally-trusted CA so HTTPS terminates), so any tool on that machine
+  — **including ones that hardcode the OpenAI URL, like gstack's design binary** —
+  works with **zero config and no patching.** The desktop app automates the one-time
+  cert + redirect setup. (Phase 0 already scaffolded this: `ALTKEY_TRANSPARENT`,
+  `ALTKEY_TLS_CERT`.) See "Usage modes."
 
-New module: `engine/src/tunnel.rs` (+ license check in `auth.rs`).
+New modules: `engine/src/tunnel.rs`, `engine/src/transparent.rs` (+ license check in
+`auth.rs`).
 
 ### 3. altkey-desktop — the local GUI app (NEW)
 A desktop application on the user's machine, sitting alongside the agent. It is the
@@ -137,6 +145,23 @@ validates the per-request key against it on both paths (it always terminates TLS
 can read the key); the **relay** additionally enforces the subscription at the handle
 level for the tunnel path. Same authority either way.
 
+## Usage modes
+
+altkey is reachable two ways, serving two different needs. **Both end at the user's
+local agent**, which makes the provider call from the user's IP/sub.
+
+| Mode | How the tool reaches altkey | UX | For |
+|---|---|---|---|
+| **Transparent (local)** | the agent intercepts `api.openai.com` / `api.anthropic.com` on this machine (hosts/DNS redirect + trusted local CA) | **zero config** — keep your existing OpenAI setup; even hardcoded-URL tools just work, no patching | tools running on the same machine as the agent |
+| **Tunnel (remote)** | the tool points at `https://you.altkey.app/v1` with an `ak_live_` key | set base URL + key once | phone, other devices, cron, deployed apps, teammates |
+
+Transparent mode is the "it just works like a real key" experience, but is
+**local-machine-scoped** — you can only redirect DNS on the machine the agent runs on.
+Tunnel mode is the "reachable from anywhere" layer. Transparent mode also **removes the
+need for per-tool patching** for local use: the reason gstack's design binary needed a
+source patch (it hardcoded the URL) disappears, because the hardcoded URL is exactly
+what gets intercepted.
+
 ---
 
 ## Endpoint key + license lifecycle
@@ -182,29 +207,53 @@ case, any exception must be opt-in and disclosed.)
 
 ## Monetization
 
-**No free tier. License-gated from first run** (the binary checks the account's
-subscription on launch; no active sub = it does not serve). **Two plans for now;
-teams later.**
+**No free tier. License-gated from first run** — the binary checks the account's
+subscription on launch; no active sub = it does not serve (on a laptop, Pi, or VPS
+alike — *where the agent runs never changes the meter*). **Two plans; team is future.**
 
-| | **altkey — $5/mo** | **altkey Pro — $25/mo** |
+The differentiator is **throughput + reliability**, NOT machine count or "adapters"
+(both rejected as fake levers — one always-on box already gives a solo user the whole
+core, and transparent mode makes tools just work without patching). The **$15** tier is
+the complete product for one person, with a *fair cap on tunnel throughput/concurrency*
+— sized so normal use never notices and heavy daily use does. The **$25** tier lifts
+that cap and adds what a user who *depends* on altkey needs. (Capping the **tunnel** is
+legitimate: it reflects altkey's own relay cost. altkey never meters *inference* — the
+provider already does, via the sub.)
+
+| | **altkey — $15/mo** | **altkey Pro — $25/mo** |
 |---|---|---|
-| Local proxy (Claude + ChatGPT → one `/v1`) | ✅ | ✅ |
-| Reachable tunnel URL (`you.altkey.app/v1`) | ✅ | ✅ |
-| Machines connected | 1 | multiple |
-| Custom domain | — | ✅ |
-| Pre-patched tool adapters | — | ✅ |
-| Usage dashboard | basic | full |
-| Throughput / priority | standard | priority |
+| Subs → one reachable key | ✅ | ✅ |
+| Transparent local mode (every tool just works, zero config) | ✅ | ✅ |
+| Tunnel URL, reachable anywhere | ✅ | ✅ |
+| All providers + capabilities (chat/vision/tools/images) | ✅ | ✅ |
+| Run the agent anywhere (laptop / Pi / VPS) | ✅ | ✅ |
+| Custom subdomain (`you.altkey.app`) | ✅ | ✅ |
+| Basic usage view | ✅ | ✅ |
+| **Tunnel throughput / concurrency** | fair cap | **uncapped / priority** |
+| **Reliability / failover** (endpoint stays up across 2 machines) | — | ✅ |
+| **Multiple named endpoints + custom domain** (`api.you.com`) | — | ✅ |
+| **Advanced usage analytics** (per-tool/model, value-saved, export) | — | ✅ |
+| **Priority support** | — | ✅ |
+| Team seats / SSO / audit | — | *(future)* |
 
-- **$5** = "altkey works" — the entry hook: your subs, one key, reachable, one machine.
-- **$25** = power users — multiple machines, custom domain, adapter bundles, full
-  dashboard, priority. Where the revenue concentrates.
-- **Team / SSO / audit** = future (noted, not built in this scope).
-- Billing via **Polar**. The meter is the **license + control-plane features**;
-  altkey never meters inference (the provider already did, via the sub).
+**Personas:**
+- **$15 — "I want my subs in my tools."** Casual-to-regular dev. Sets it up, it works.
+- **$25 Pro — "altkey is critical infrastructure for me."** Heavy daily use; can't
+  tolerate throttling or downtime; wants control + support. (Later: "…and my team.")
+
+**Design principle:** the $15 throughput cap *is* the product design. Without a real,
+fair limit on $15, no power user has a reason to upgrade — that's the trap that killed
+the "machines" and "adapters" levers. Throughput + reliability is the honest limit.
+
+- **Launch pricing:** list **$15/mo**; a **$10/mo founding rate** for the first ~100
+  users, grandfathered for life (low-friction cold-start entry without anchoring the
+  value low; new users pay $15 after).
+- Billing via **Polar**.
+- **Team** = the future tier above $25 (or $25 becomes the team price) — the real
+  expansion lever, deferred from this scope.
 - No free funnel ⇒ acquisition rides the landing page + word of mouth; a future
-  *time-limited trial* (not a permanent free tier) is the only "try before buy" lever
-  and is out of scope for now.
+  *time-limited trial* (not a permanent free tier) is the only "try before buy" lever,
+  out of scope for now.
 
 ---
 
@@ -231,7 +280,9 @@ OpenAI⟷provider translation, OAuth read/refresh (incl. write-back to `~/.codex
 `/v1/*` surface, local key store, admin endpoints.
 
 **New:**
-1. Agent tunnel client + per-handle TLS termination + license/key check (`engine/`).
+1. Agent: tunnel client + per-handle TLS termination + license/key check + transparent
+   mode (local intercept of `api.openai.com`/`api.anthropic.com` via cert + redirect)
+   (`engine/`).
 2. Relay/edge service (SNI passthrough forwarder over outbound tunnels).
 3. Control plane (accounts, Polar billing, key + handle registry, validation API,
    usage, adapter delivery, dashboard) — the web app.
@@ -267,6 +318,10 @@ OpenAI⟷provider translation, OAuth read/refresh (incl. write-back to `~/.codex
 - Closed-source trust earned the 1Password way: passthrough crypto (relay *can't*
   read), code signing, a published third-party security audit, network-transparency
   (a user can verify the agent only talks to provider endpoints + the relay).
+- **Transparent mode installs a local CA** to terminate HTTPS for the intercepted
+  provider hosts (the Charles/Proxyman technique). The desktop app automates it, but it
+  is a real, **disclosed** trust step — never silent. Scoped to the user's own machine
+  and their own traffic; the CA is generated locally and never shared.
 
 ---
 
