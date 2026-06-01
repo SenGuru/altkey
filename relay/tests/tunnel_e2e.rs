@@ -26,20 +26,22 @@ async fn request_routes_through_the_tunnel_end_to_end() {
     }
 
     // 3. Wait until the agent has registered the handle (poll, don't just sleep).
+    //    Ceiling: 100 × 20 ms ≈ 2 s.
     for _ in 0..100 {
         if reg.control_for("h").is_some() { break; }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    assert!(reg.control_for("h").is_some(), "agent should register handle h");
+    assert!(reg.control_for("h").is_some(),
+        "agent never registered handle 'h'; check that both relay listeners started and altkey::tunnel::run did not error");
 
     // 4. Client that trusts any cert (the agent self-signs per-process) and resolves
     //    h.altkey.app to the relay public port.
     let body = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
-        .resolve("h.altkey.app", format!("127.0.0.1:{}", public_addr.port()).parse().unwrap())
+        .resolve("h.altkey.app", public_addr)
         .build().unwrap()
         .get(format!("https://h.altkey.app:{}/v1/models", public_addr.port()))
-        .timeout(Duration::from_secs(15))
+        .timeout(Duration::from_secs(15)) // generous ceiling for tunnel TLS + loopback roundtrip
         .send().await.unwrap()
         .text().await.unwrap();
 
