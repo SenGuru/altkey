@@ -24,6 +24,8 @@ import {
   usageSummary,
   listAdapters,
   checkout,
+  portal,
+  request as requestMagicLink,
   logout,
 } from '../client/services.gen';
 import type {
@@ -225,6 +227,25 @@ export function useCheckout() {
       const { data, error } = await checkout({ body });
       if (error || !data) throw new Error('checkout failed');
       return data as UrlResponse;
+    },
+  });
+}
+
+export function usePortal() {
+  return useMutation({
+    mutationFn: async (): Promise<UrlResponse> => {
+      const { data, error } = await portal();
+      if (error || !data) throw new Error('portal failed');
+      return data as UrlResponse;
+    },
+  });
+}
+
+export function useRequestMagicLink() {
+  return useMutation({
+    mutationFn: async (email: string): Promise<void> => {
+      const { error } = await requestMagicLink({ body: { email } });
+      if (error) throw new Error('magic-link request failed');
     },
   });
 }

@@ -1,23 +1,16 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { useMe } from './lib/queries';
 import { App } from './app';
+import { Login } from './pages/Login';
+import { Billing } from './pages/Billing';
 
-// ─── Placeholder page components (real pages implemented in Tasks 3-6) ────────
+// ─── Placeholder page components (real pages implemented in Tasks 5-6) ────────
 function Dashboard() { return <div>Dashboard</div>; }
 function Handles() { return <div>Handles</div>; }
 function Machines() { return <div>Machines</div>; }
 function Keys() { return <div>Keys</div>; }
 function Usage() { return <div>Usage</div>; }
 function Adapters() { return <div>Adapters</div>; }
-function Billing() { return <div>Billing</div>; }
-function Login() {
-  return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h1>altkey — sign in</h1>
-      <p>Login page placeholder.</p>
-    </div>
-  );
-}
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 function AuthGuard() {
