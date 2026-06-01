@@ -97,6 +97,7 @@ dependencies = [
  "rand 0.8.6",
  "serde",
  "sha2",
+ "subtle",
 ]
 
 [[package]]
@@ -104,6 +105,7 @@ name = "altkey-relay"
 version = "0.1.0"
 dependencies = [
  "altkey",
+ "altkey-api",
  "anyhow",
  "axum",
  "parking_lot",

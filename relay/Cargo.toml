@@ -16,6 +16,8 @@ test-helpers = []
 
 [dependencies]
 tunnel-proto = { path = "../tunnel-proto" }
+altkey-api = { path = "../altkey-api" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 tracing = "0.1"
@@ -28,6 +30,10 @@ required-features = ["test-helpers"]
 
 [[test]]
 name = "pending_reclaim"
+required-features = ["test-helpers"]
+
+[[test]]
+name = "relay_authorize"
 required-features = ["test-helpers"]
 
 [[test]]
