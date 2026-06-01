@@ -31,7 +31,36 @@ pub async fn serve_listener(reg: Registry, listener: TcpListener) -> anyhow::Res
     }
 }
 
-pub(crate) async fn handle_public(reg: Registry, mut public: TcpStream) -> anyhow::Result<()> {
+pub(crate) async fn handle_public(reg: Registry, public: TcpStream) -> anyhow::Result<()> {
+    handle_public_with_timeout(reg, public, Duration::from_secs(10)).await
+}
+
+/// Body of [`handle_public`] with an injectable data-wait timeout so tests can
+/// exercise the timeout/reclaim path without a real 10s wait. The public entry
+/// point keeps the 10s default.
+#[cfg(not(any(test, feature = "test-helpers")))]
+pub(crate) async fn handle_public_with_timeout(
+    reg: Registry,
+    public: TcpStream,
+    wait: Duration,
+) -> anyhow::Result<()> {
+    handle_public_inner(reg, public, wait).await
+}
+
+#[cfg(any(test, feature = "test-helpers"))]
+pub async fn handle_public_with_timeout(
+    reg: Registry,
+    public: TcpStream,
+    wait: Duration,
+) -> anyhow::Result<()> {
+    handle_public_inner(reg, public, wait).await
+}
+
+async fn handle_public_inner(
+    reg: Registry,
+    mut public: TcpStream,
+    wait: Duration,
+) -> anyhow::Result<()> {
     let (sni, buffered) = peek_sni(&mut public).await?;
     let handle = handle_from_sni(&sni)
         .ok_or_else(|| anyhow::anyhow!("unknown sni {sni}"))?
@@ -41,11 +70,30 @@ pub(crate) async fn handle_public(reg: Registry, mut public: TcpStream) -> anyho
         .ok_or_else(|| anyhow::anyhow!("no agent for handle {handle}"))?;
 
     let (conn_id, data_rx) = reg.reserve_conn();
-    control.send(conn_id).await.map_err(|_| anyhow::anyhow!("agent control closed"))?;
+    // From here on the registry holds a pending sender for `conn_id`. On the happy
+    // path the agent's data conn consumes it via `take_pending`. On any failure
+    // path below we must reclaim it ourselves, or the entry leaks forever (a slow
+    // unbounded-memory DoS via agents that never dial back).
+    if control.send(conn_id).await.is_err() {
+        reg.take_pending(conn_id);
+        anyhow::bail!("agent control closed");
+    }
 
-    let mut data = tokio::time::timeout(Duration::from_secs(10), data_rx)
-        .await
-        .map_err(|_| anyhow::anyhow!("timeout waiting for agent data conn"))??;
+    let mut data = match tokio::time::timeout(wait, data_rx).await {
+        Ok(Ok(data)) => data,
+        // Timeout, or the sender was dropped without delivering a socket. The
+        // pending entry (if still present) is now stale — reclaim it. A benign
+        // race where the agent delivers just after the timeout is harmless:
+        // `take_pending` simply returns `None`.
+        Ok(Err(_)) => {
+            reg.take_pending(conn_id);
+            anyhow::bail!("agent data conn dropped");
+        }
+        Err(_) => {
+            reg.take_pending(conn_id);
+            anyhow::bail!("timeout waiting for agent data conn");
+        }
+    };
 
     // Replay the buffered ClientHello to the agent, then splice raw bytes both ways.
     data.write_all(&buffered).await?;

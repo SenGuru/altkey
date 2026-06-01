@@ -42,10 +42,20 @@ impl Registry {
     pub fn take_pending(&self, conn_id: u64) -> Option<oneshot::Sender<TcpStream>> {
         self.pending.lock().remove(&conn_id)
     }
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn pending_len(&self) -> usize {
+        self.pending.lock().len()
+    }
     pub async fn run(self, public_addr: &str, agent_addr: &str) -> anyhow::Result<()> {
         let agent = crate::agent_conn::serve(self.clone(), agent_addr.to_string());
         let public = crate::public::serve(self.clone(), public_addr.to_string());
         tokio::try_join!(agent, public)?;
         Ok(())
+    }
+}
+
+impl Default for Registry {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -27,6 +27,10 @@ name = "agent_register"
 required-features = ["test-helpers"]
 
 [[test]]
+name = "pending_reclaim"
+required-features = ["test-helpers"]
+
+[[test]]
 name = "tunnel_e2e"
 
 [dev-dependencies]
