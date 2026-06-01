@@ -145,6 +145,7 @@ pub async fn list_handles(
 ) -> Result<Json<Vec<HandleView>>, ApiError> {
     let rows = Handle::find()
         .filter(handle::Column::AccountId.eq(acct.id))
+        .filter(handle::Column::Status.eq("active"))
         .all(&state.db)
         .await?;
     Ok(Json(rows.into_iter().map(HandleView::from).collect()))
@@ -238,6 +239,7 @@ pub async fn list_agents(
 ) -> Result<Json<Vec<AgentView>>, ApiError> {
     let rows = Agent::find()
         .filter(agent::Column::AccountId.eq(acct.id))
+        .filter(agent::Column::Status.eq("active"))
         .all(&state.db)
         .await?;
     Ok(Json(rows.into_iter().map(AgentView::from).collect()))
@@ -327,6 +329,7 @@ pub async fn list_keys(
 ) -> Result<Json<Vec<KeyView>>, ApiError> {
     let rows = EndpointKey::find()
         .filter(endpoint_key::Column::AccountId.eq(acct.id))
+        .filter(endpoint_key::Column::RevokedAt.is_null())
         .all(&state.db)
         .await?;
     Ok(Json(rows.into_iter().map(KeyView::from).collect()))
