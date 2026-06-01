@@ -6,13 +6,6 @@ use anyhow::{anyhow, Result};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
-
-/// True while the tunnel control connection is up and Ready was confirmed.
-pub static TUNNEL_UP: AtomicBool = AtomicBool::new(false);
-
-pub fn is_up() -> bool {
-    TUNNEL_UP.load(Ordering::SeqCst)
-}
 use tokio_rustls::rustls::{
     crypto::ring as ring_provider,
     pki_types::{CertificateDer, PrivateKeyDer},
@@ -21,6 +14,13 @@ use tokio_rustls::rustls::{
 use tokio_rustls::TlsAcceptor;
 use tower::ServiceExt; // for Router::oneshot
 use tunnel_proto::messages::{read_msg, write_msg, AgentMsg, RelayMsg};
+
+/// True while the tunnel control connection is up and Ready was confirmed.
+pub static TUNNEL_UP: AtomicBool = AtomicBool::new(false);
+
+pub fn is_up() -> bool {
+    TUNNEL_UP.load(Ordering::SeqCst)
+}
 
 /// Ensure the process-wide default rustls CryptoProvider is installed (ring).
 /// Idempotent: a second call returns Err, which we ignore — same pattern as

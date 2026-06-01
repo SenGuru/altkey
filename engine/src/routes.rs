@@ -497,6 +497,9 @@ async fn admin_tunnel_start(headers: HeaderMap) -> Response {
     if let Err(e) = require_admin(&headers) {
         return (e.0, e.1).into_response();
     }
+    if crate::tunnel::is_up() {
+        return Json(json!({"ok": false, "error": "tunnel already running"})).into_response();
+    }
     let app = build_router();
     let relay = config::relay_addr();
     let handle = config::handle();
@@ -512,8 +515,11 @@ async fn admin_tunnel_stop(headers: HeaderMap) -> Response {
     if let Err(e) = require_admin(&headers) {
         return (e.0, e.1).into_response();
     }
+    // NOTE: MVP — this only clears the status flag; the spawned tunnel task keeps
+    // running until its control connection drops. TODO: track the JoinHandle and
+    // abort() it here to truly stop the tunnel.
     crate::tunnel::TUNNEL_UP.store(false, std::sync::atomic::Ordering::SeqCst);
-    Json(json!({"ok": true, "stopped": true})).into_response()
+    Json(json!({"ok": true, "flag_cleared": true})).into_response()
 }
 
 async fn admin_tunnel_status(headers: HeaderMap) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
