@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
         db,
         config,
         email: std::sync::Arc::new(control_plane::auth::email::LoggingEmailSender),
+        oauth: std::sync::Arc::new(control_plane::auth::oauth::registry_from_env()),
     });
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
     tracing::info!("control-plane listening on {}", bind_addr);
