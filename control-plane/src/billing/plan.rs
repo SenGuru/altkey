@@ -18,14 +18,6 @@ impl Plan {
             Plan::Pro => "pro",
         }
     }
-    pub fn from_str(s: &str) -> Option<Plan> {
-        match s {
-            "founding" => Some(Plan::Founding),
-            "standard" => Some(Plan::Standard),
-            "pro" => Some(Plan::Pro),
-            _ => None,
-        }
-    }
     pub fn is_founding(self) -> bool {
         matches!(self, Plan::Founding)
     }
