@@ -8,6 +8,7 @@ mod sse;
 mod translate;
 mod providers;
 mod routes;
+mod transparent;
 
 use anyhow::Result;
 use std::net::SocketAddr;
@@ -30,6 +31,15 @@ async fn main() -> Result<()> {
     });
 
     let app = routes::build_router();
+
+    if std::env::var("ALTKEY_TRANSPARENT").as_deref() == Ok("1") {
+        let app_for_transparent = routes::build_router();
+        match transparent::enable(app_for_transparent).await {
+            Ok(()) => tracing::info!("transparent mode ON (api.openai.com/api.anthropic.com intercepted)"),
+            Err(e) => tracing::warn!("transparent mode failed: {e} (need admin/root?)"),
+        }
+    }
+
     let addr: SocketAddr = "127.0.0.1:8787".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("altkey engine listening on http://{}", addr);

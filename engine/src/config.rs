@@ -28,3 +28,27 @@ pub fn claude_creds_path() -> PathBuf {
 pub fn codex_creds_path() -> PathBuf {
     home().join(".codex").join("auth.json")
 }
+
+/// Hosts altkey intercepts in transparent mode.
+pub const INTERCEPT_HOSTS: [&str; 2] = ["api.openai.com", "api.anthropic.com"];
+
+pub fn ca_cert_path() -> PathBuf {
+    altkey_dir().join("ca.crt")
+}
+
+pub fn ca_key_path() -> PathBuf {
+    altkey_dir().join("ca.key")
+}
+
+/// Path to the OS hosts file.
+pub fn hosts_path() -> PathBuf {
+    #[cfg(windows)]
+    {
+        let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+        std::path::Path::new(&root).join("System32\\drivers\\etc\\hosts")
+    }
+    #[cfg(not(windows))]
+    {
+        std::path::PathBuf::from("/etc/hosts")
+    }
+}
