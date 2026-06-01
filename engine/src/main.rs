@@ -9,6 +9,8 @@ mod translate;
 mod providers;
 mod routes;
 mod transparent;
+mod tunnel_cert;
+mod tunnel;
 
 use anyhow::Result;
 use std::net::SocketAddr;
@@ -38,6 +40,17 @@ async fn main() -> Result<()> {
             Ok(()) => tracing::info!("transparent mode ON (api.openai.com/api.anthropic.com intercepted)"),
             Err(e) => tracing::warn!("transparent mode failed: {e} (need admin/root?)"),
         }
+    }
+
+    if std::env::var("ALTKEY_TUNNEL").as_deref() == Ok("1") {
+        let app = routes::build_router();
+        let relay = config::relay_addr();
+        let handle = config::handle();
+        tokio::spawn(async move {
+            if let Err(e) = tunnel::run(app, relay, handle).await {
+                tracing::warn!("tunnel exited: {e}");
+            }
+        });
     }
 
     let addr: SocketAddr = "127.0.0.1:8787".parse().unwrap();

@@ -1,0 +1,43 @@
+[package]
+name = "altkey-relay"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "altkey-relay"
+path = "src/main.rs"
+
+[lib]
+name = "altkey_relay"
+path = "src/lib.rs"
+
+[features]
+test-helpers = []
+
+[dependencies]
+tunnel-proto = { path = "../tunnel-proto" }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+parking_lot = "0.12"
+
+[[test]]
+name = "agent_register"
+required-features = ["test-helpers"]
+
+[[test]]
+name = "pending_reclaim"
+required-features = ["test-helpers"]
+
+[[test]]
+name = "tunnel_e2e"
+
+[dev-dependencies]
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pemfile = "2"
+rcgen = { version = "0.13", features = ["x509-parser"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+axum = "0.7"
+altkey = { path = "../engine" }

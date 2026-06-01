@@ -52,3 +52,12 @@ pub fn hosts_path() -> PathBuf {
         std::path::PathBuf::from("/etc/hosts")
     }
 }
+
+/// Relay agent endpoint the tunnel client dials (host:port).
+pub fn relay_addr() -> String {
+    std::env::var("ALTKEY_RELAY_ADDR").unwrap_or_else(|_| "127.0.0.1:7000".into())
+}
+/// This agent's handle (subdomain). For MVP from env; later from the account.
+pub fn handle() -> String {
+    std::env::var("ALTKEY_HANDLE").unwrap_or_else(|_| "local".into())
+}
