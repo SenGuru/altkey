@@ -1,6 +1,7 @@
 //! Token formats for altkey-cloud. Two kinds, both `<prefix><random>`:
 //! - `ak_agent_…` identifies one paired machine to the cloud (relay + validation API).
 //! - `ak_live_…`  is the endpoint key a calling app sends; the agent validates it.
+//!
 //! Secrets are shown to the user exactly once; the cloud stores only `hash()`.
 use rand::Rng;
 use sha2::{Digest, Sha256};
