@@ -12,6 +12,7 @@ mod routes;
 mod transparent;
 mod tunnel_cert;
 mod tunnel;
+mod usage;
 
 use anyhow::Result;
 use std::net::SocketAddr;
@@ -24,6 +25,21 @@ async fn main() -> Result<()> {
         .init();
 
     store::init()?;
+
+    // Spin up the best-effort usage reporter when control-plane is configured.
+    if let (Some(cp_url), Some(agent_tok)) = (config::control_plane_url(), config::agent_token()) {
+        let reporter = std::sync::Arc::new(usage::UsageReporter::new(cp_url, agent_tok));
+        // Populate the global accessor used by the request path.
+        let _ = usage::REPORTER.set(reporter.clone());
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+            loop {
+                interval.tick().await;
+                reporter.flush().await;
+            }
+        });
+        tracing::info!("usage reporter: enabled (flushing every 10 s)");
+    }
 
     // Best-effort claude_oauth refresh loop in the background.
     tokio::spawn(async {

@@ -1,4 +1,5 @@
 pub use super::account::Entity as Account;
+pub use super::adapter::Entity as Adapter;
 pub use super::agent::Entity as Agent;
 pub use super::endpoint_key::Entity as EndpointKey;
 pub use super::handle::Entity as Handle;
@@ -7,3 +8,5 @@ pub use super::magic_link::Entity as MagicLink;
 pub use super::oauth_flow::Entity as OauthFlow;
 pub use super::session::Entity as Session;
 pub use super::subscription::Entity as Subscription;
+pub use super::usage_record::Entity as UsageRecord;
+pub use super::usage_rollup::Entity as UsageRollup;

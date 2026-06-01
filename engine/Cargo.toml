@@ -46,6 +46,7 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 rustls-pemfile = "2"
 tunnel-proto = { path = "../tunnel-proto" }
 altkey-api = { path = "../altkey-api" }
+chrono = { version = "0.4", features = ["serde"] }
 
 [profile.release]
 opt-level = 3

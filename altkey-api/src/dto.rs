@@ -33,3 +33,22 @@ pub struct KeyValidateResponse {
     pub sub_active: bool,
     pub plan: String,
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct UsageRecordDto {
+    pub ts: String,          // RFC3339
+    pub provider: String,
+    pub model: String,
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub total_tokens: i64,
+    pub tunnel_bytes: i64,
+    pub tool: Option<String>,
+    pub key_prefix: Option<String>, // which ak_live_ (prefix only)
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct UsageBatch {
+    pub agent_token: String,
+    pub records: Vec<UsageRecordDto>,
+}
