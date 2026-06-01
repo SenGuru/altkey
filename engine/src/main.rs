@@ -8,6 +8,7 @@ mod sse;
 mod translate;
 mod providers;
 mod routes;
+mod transparent;
 
 use anyhow::Result;
 use std::net::SocketAddr;
